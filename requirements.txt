@@ -1,0 +1,9 @@
+streamlit
+pandas
+openpyxl
+pytz
+pillow
+reportlab
+SpeechRecognition
+gspread
+oauth2client
