@@ -33,7 +33,7 @@ from reportlab.platypus import (
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(
-    page_title="Juiz De Fora audit — Shelf Space Royal Canin",
+    page_title="Auditoria Juiz de Fora 2026",
     page_icon="🐾",
     layout="centered",
     initial_sidebar_state="expanded",
@@ -73,7 +73,7 @@ APELIDOS_POR_CODIGO = {
 # --- GESTÃO DO JSON OFICIAL + TESTES SEPARADOS ---
 def estrutura_json_padrao() -> dict:
     return {
-        "projeto": "Juiz De Fora audit",
+        "projeto": "Auditoria Juiz de Fora 2026",
         "modo_teste": False,
         "atualizado_em": datetime.now(pytz.timezone("America/Sao_Paulo")).strftime(
             "%d/%m/%Y %H:%M:%S"
@@ -89,12 +89,11 @@ def carregar_dados_json() -> dict:
         try:
             data = json.loads(ARQUIVO_JSON_HISTORICO.read_text(encoding="utf-8"))
             if isinstance(data, dict):
-                data.setdefault("projeto", "Juiz De Fora audit")
+                data.setdefault("projeto", "Auditoria Juiz de Fora 2026")
                 data.setdefault("modo_teste", False)
                 data.setdefault("lojas_roteiro", [])
                 data.setdefault("auditorias", [])
                 data.setdefault("testes", [])
-                # Garante que nenhum registro de teste fique misturado nas auditorias oficiais
                 testes_migrados = [
                     r for r in data["auditorias"] if r.get("registro_teste", False)
                 ]
@@ -123,9 +122,10 @@ def salvar_dados_json(payload: dict) -> bool:
         payload["atualizado_em"] = datetime.now(
             pytz.timezone("America/Sao_Paulo")
         ).strftime("%d/%m/%Y %H:%M:%S")
-        # Segurança dupla: nunca permite registro_teste=True dentro de "auditorias"
         payload["auditorias"] = [
-            r for r in payload.get("auditorias", []) if not r.get("registro_teste", False)
+            r
+            for r in payload.get("auditorias", [])
+            if not r.get("registro_teste", False)
         ]
         ARQUIVO_JSON_HISTORICO.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -141,10 +141,8 @@ def registrar_no_json(novo_registro: dict, eh_teste: bool) -> bool:
     novo_registro["registro_teste"] = bool(eh_teste)
 
     if eh_teste:
-        # Salva apenas na área de testes; não altera status oficial da loja nem entra em auditorias
         payload.setdefault("testes", []).append(novo_registro)
     else:
-        # Salva na lista oficial de auditorias e dá baixa na loja dentro de lojas_roteiro
         payload.setdefault("auditorias", []).append(novo_registro)
         cod_alvo = str(novo_registro.get("codigo_loja", "")).strip()
         for loja_item in payload.get("lojas_roteiro", []):
@@ -176,16 +174,43 @@ def limpar_testes_json() -> bool:
 # --- CARREGAR PLANILHA DE CLIENTES ---
 @st.cache_data
 def load_clients():
-    for nome_arq in [
+    candidatos = [
         "Cópia de clientes com cnpj corretinho novinho.xlsx",
         "Cópia de clientes com cnpj corretinho novinho (1).xlsx",
-    ]:
+    ]
+    for nome_arq in candidatos:
         if os.path.exists(nome_arq):
             try:
-                return pd.read_excel(nome_arq)
+                xls = pd.ExcelFile(nome_arq)
+                aba = "Book1" if "Book1" in xls.sheet_names else xls.sheet_names[0]
+                return pd.read_excel(nome_arq, sheet_name=aba)
             except Exception as e:
                 st.error(f"Erro ao carregar a planilha de clientes: {e}")
                 return pd.DataFrame()
+
+    xlsx_disponiveis = [
+        f
+        for f in os.listdir(".")
+        if f.lower().endswith(".xlsx") and not f.startswith("~$")
+    ]
+    for arq in xlsx_disponiveis:
+        if "cliente" in arq.lower() or "cnpj" in arq.lower():
+            try:
+                xls = pd.ExcelFile(arq)
+                aba = "Book1" if "Book1" in xls.sheet_names else xls.sheet_names[0]
+                return pd.read_excel(arq, sheet_name=aba)
+            except Exception as e:
+                st.error(f"Erro ao carregar {arq}: {e}")
+                return pd.DataFrame()
+
+    if xlsx_disponiveis:
+        try:
+            xls = pd.ExcelFile(xlsx_disponiveis[0])
+            return pd.read_excel(xlsx_disponiveis[0], sheet_name=xls.sheet_names[0])
+        except Exception as e:
+            st.error(f"Erro ao carregar {xlsx_disponiveis[0]}: {e}")
+            return pd.DataFrame()
+
     st.error("A planilha de clientes não foi encontrada.")
     return pd.DataFrame()
 
@@ -845,7 +870,7 @@ dados_json_nav = carregar_dados_json()
 qtd_oficiais = len(dados_json_nav.get("auditorias", []))
 qtd_testes = len(dados_json_nav.get("testes", []))
 
-st.sidebar.title("🐾 Juiz De Fora audit")
+st.sidebar.title("🐾 Auditoria Juiz de Fora 2026")
 st.sidebar.caption(
     f"💾 Oficiais: **{qtd_oficiais}** | 🧪 Testes: **{qtd_testes}**"
 )
@@ -862,7 +887,7 @@ menu = st.sidebar.selectbox(
 # FLUXO 1: ÁREA DA PROMOTORA
 # ==============================================================
 if menu == "📝 Área da Promotora":
-    st.title("🐾 Juiz De Fora audit — Shelf Space Royal Canin")
+    st.title("🐾 Auditoria Juiz de Fora 2026")
     st.markdown("---")
 
     if df_clientes.empty:
@@ -929,7 +954,6 @@ if menu == "📝 Área da Promotora":
                     df_clientes["CIDADE_NORM"] == "JUIZ DE FORA"
                 ].copy()
 
-            # Considera como auditadas APENAS auditorias oficiais (ignora testes)
             codigos_oficiais_auditados = {
                 str(r.get("codigo_loja", "")).strip()
                 for r in dados_json_nav.get("auditorias", [])
@@ -1362,7 +1386,6 @@ if menu == "📝 Área da Promotora":
                 value=False,
             )
 
-            # FLAG DE TESTE: quando marcada, salva apenas em "testes" e não entra nas auditorias oficiais
             registrar_como_teste = st.checkbox(
                 "🧪 Registrar como teste (não entra nas auditorias oficiais nem dá baixa na loja)",
                 value=False,
@@ -1604,7 +1627,6 @@ if menu == "📝 Área da Promotora":
                         os.rename(audio_temp_path, audio_novo_path)
                         lista_anexos.append(audio_novo_path)
 
-                    # Só grava no Google Sheets oficial se NÃO for teste
                     if not registrar_como_teste:
                         dados_planilha = [
                             data_atual,
@@ -1716,7 +1738,7 @@ if menu == "📝 Área da Promotora":
 # FLUXO 2: HISTÓRICO & FEEDBACKS
 # ==============================================================
 elif menu == "📋 Histórico & Feedbacks":
-    st.title("📋 Histórico de Auditorias & Feedbacks — Juiz De Fora audit")
+    st.title("📋 Histórico de Auditorias & Feedbacks")
     st.markdown("---")
 
     dados_json = carregar_dados_json()
