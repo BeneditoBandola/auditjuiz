@@ -1391,7 +1391,8 @@ if menu == "📝 Área da Promotora":
           "Selecione quem deve receber o relatório completo (PDF):",
           [
               "Somente Benedito",
-              "Toda a Equipe (Benedito, Poli, Caio, Daniel, Rubens)",
+              "Benedito e Pamela",
+              "Toda a Equipe (Benedito, Pamela, Poli, Caio, Daniel, Rubens)",
           ],
       )
 
@@ -1413,23 +1414,25 @@ if menu == "📝 Área da Promotora":
 
       st.markdown("---")
       if st.button("Finalizar, Salvar e Enviar Auditoria", type="primary"):
+        emails_benedito = [
+            "benedito.bandola@minassal.com.br",
+            "beneditobandola@gmail.com",
+        ]
+
         if registrar_como_teste:
-          destinatarios = ["benedito.bandola@minassal.com.br"]
+          destinatarios = list(emails_benedito)
         elif opcao_envio == "Somente Benedito":
-          destinatarios = ["benedito.bandola@minassal.com.br"]
+          destinatarios = list(emails_benedito)
+        elif opcao_envio == "Benedito e Pamela":
+          destinatarios = emails_benedito + ["pamelaalmeida5@icloud.com"]
         else:
-          destinatarios = [
-              "benedito.bandola@minassal.com.br",
+          destinatarios = emails_benedito + [
+              "pamelaalmeida5@icloud.com",
               "poli@minassal.com.br",
               "caio.poli@minassal.com.br",
               "daniel.santini@minassal.com.br",
               "rubens.porfirio@minassal.com.br",
           ]
-
-        if not registrar_como_teste:
-          email_pamela = "pamelaalmeida5@icloud.com"
-          if email_pamela not in destinatarios:
-            destinatarios.append(email_pamela)
 
         nota_total = 0.0
 
@@ -1707,6 +1710,7 @@ if menu == "📝 Área da Promotora":
                   "qtd_pontos_extras": qtd_pontos_extras,
               },
               "observacoes": observacoes_promotora.strip(),
+              "destinatarios_envio": destinatarios,
               "sincronizado_sheets": salvou_sheets,
               "email_enviado": enviado,
           }
@@ -1730,7 +1734,9 @@ if menu == "📝 Área da Promotora":
             )
 
           if enviado:
-            st.success("✅ Relatório PDF gerado e enviado por e-mail!")
+            st.success(
+                f"✅ Relatório PDF gerado e enviado para: {', '.join(destinatarios)}"
+            )
           else:
             st.warning(
                 "⚠️ Salvo no JSON local (verifique a senha de e-mail nos"
