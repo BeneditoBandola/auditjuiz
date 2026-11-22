@@ -47,10 +47,10 @@ CODIGOS_JUIZ_DE_FORA_ORDEM = [
     "21294",  # Veterinária Mendes Andrade
     "21873",  # Cristiano Resende
     "21878",  # Luciano tostes
-    "21888",  # Rp agrop (RR Agropecuaria)
+    "21888",  # Rp agrop
     "21209",  # Agrotela
     "21921",  # Cinthia
-    "24310",  # Bahpet (Supermercado Bahamas)
+    "24310",  # Bahpet
     "22341",  # Sítios e quintais
     "21472",  # Rianelli
     "21140",  # Lombello
@@ -70,30 +70,63 @@ APELIDOS_POR_CODIGO = {
 }
 
 
-# --- HISTÓRICO LOCAL EM JSON ---
-def carregar_historico_json() -> list[dict]:
+# --- GESTÃO DO JSON OFICIAL + TESTES SEPARADOS ---
+def estrutura_json_padrao() -> dict:
+    return {
+        "projeto": "Juiz De Fora audit",
+        "modo_teste": False,
+        "atualizado_em": datetime.now(pytz.timezone("America/Sao_Paulo")).strftime(
+            "%d/%m/%Y %H:%M:%S"
+        ),
+        "lojas_roteiro": [],
+        "auditorias": [],
+        "testes": [],
+    }
+
+
+def carregar_dados_json() -> dict:
     if ARQUIVO_JSON_HISTORICO.exists():
         try:
             data = json.loads(ARQUIVO_JSON_HISTORICO.read_text(encoding="utf-8"))
             if isinstance(data, dict):
-                return data.get("auditorias", [])
-            if isinstance(data, list):
+                data.setdefault("projeto", "Juiz De Fora audit")
+                data.setdefault("modo_teste", False)
+                data.setdefault("lojas_roteiro", [])
+                data.setdefault("auditorias", [])
+                data.setdefault("testes", [])
+                # Garante que nenhum registro de teste fique misturado nas auditorias oficiais
+                testes_migrados = [
+                    r for r in data["auditorias"] if r.get("registro_teste", False)
+                ]
+                if testes_migrados:
+                    data["testes"].extend(testes_migrados)
+                    data["auditorias"] = [
+                        r
+                        for r in data["auditorias"]
+                        if not r.get("registro_teste", False)
+                    ]
                 return data
+            if isinstance(data, list):
+                base = estrutura_json_padrao()
+                base["auditorias"] = [
+                    r for r in data if not r.get("registro_teste", False)
+                ]
+                base["testes"] = [r for r in data if r.get("registro_teste", False)]
+                return base
         except Exception as e:
             st.warning(f"Erro ao ler {ARQUIVO_JSON_HISTORICO}: {e}")
-    return []
+    return estrutura_json_padrao()
 
 
-def salvar_historico_json(registros: list[dict]) -> bool:
+def salvar_dados_json(payload: dict) -> bool:
     try:
-        payload = {
-            "projeto": "Juiz De Fora audit",
-            "atualizado_em": datetime.now(pytz.timezone("America/Sao_Paulo")).strftime(
-                "%d/%m/%Y %H:%M:%S"
-            ),
-            "total_registros": len(registros),
-            "auditorias": registros,
-        }
+        payload["atualizado_em"] = datetime.now(
+            pytz.timezone("America/Sao_Paulo")
+        ).strftime("%d/%m/%Y %H:%M:%S")
+        # Segurança dupla: nunca permite registro_teste=True dentro de "auditorias"
+        payload["auditorias"] = [
+            r for r in payload.get("auditorias", []) if not r.get("registro_teste", False)
+        ]
         ARQUIVO_JSON_HISTORICO.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
         )
@@ -103,10 +136,41 @@ def salvar_historico_json(registros: list[dict]) -> bool:
         return False
 
 
-def registrar_no_json(novo_registro: dict) -> bool:
-    historico = carregar_historico_json()
-    historico.append(novo_registro)
-    return salvar_historico_json(historico)
+def registrar_no_json(novo_registro: dict, eh_teste: bool) -> bool:
+    payload = carregar_dados_json()
+    novo_registro["registro_teste"] = bool(eh_teste)
+
+    if eh_teste:
+        # Salva apenas na área de testes; não altera status oficial da loja nem entra em auditorias
+        payload.setdefault("testes", []).append(novo_registro)
+    else:
+        # Salva na lista oficial de auditorias e dá baixa na loja dentro de lojas_roteiro
+        payload.setdefault("auditorias", []).append(novo_registro)
+        cod_alvo = str(novo_registro.get("codigo_loja", "")).strip()
+        for loja_item in payload.get("lojas_roteiro", []):
+            if str(loja_item.get("codigo_loja", "")).strip() == cod_alvo:
+                loja_item["status_visita"] = "auditada"
+                loja_item["registro_teste"] = False
+                loja_item.setdefault("auditorias", []).append(
+                    {
+                        "id": novo_registro.get("id"),
+                        "data_hora": novo_registro.get("data_hora"),
+                        "tipo_auditoria": novo_registro.get("tipo_auditoria"),
+                        "nota_total": novo_registro.get("nota_total"),
+                    }
+                )
+                break
+
+    return salvar_dados_json(payload)
+
+
+def limpar_testes_json() -> bool:
+    payload = carregar_dados_json()
+    payload["testes"] = []
+    payload["modo_teste"] = False
+    for loja_item in payload.get("lojas_roteiro", []):
+        loja_item["registro_teste"] = False
+    return salvar_dados_json(payload)
 
 
 # --- CARREGAR PLANILHA DE CLIENTES ---
@@ -409,13 +473,17 @@ def gerar_pdf_auditoria(
     nota_total,
     frentes_dados,
     caminhos_fotos=None,
+    eh_teste=False,
 ):
     loja_limpa = (
         "".join([c for c in loja if c.isalnum() or c in (" ", "_", "-")])
         .strip()
         .replace(" ", "_")
     )
-    arq_completo = f"{tipo_auditoria.upper().replace('-', '_')}_{loja_limpa}.pdf"
+    prefixo_teste = "TESTE_" if eh_teste else ""
+    arq_completo = (
+        f"{prefixo_teste}{tipo_auditoria.upper().replace('-', '_')}_{loja_limpa}.pdf"
+    )
 
     estilos = getSampleStyleSheet()
     style_celula = ParagraphStyle(
@@ -442,9 +510,10 @@ def gerar_pdf_auditoria(
 
     def criar_pagina_1():
         elem = []
+        selo_teste = " [REGISTRO DE TESTE]" if eh_teste else ""
         elem.append(
             Paragraph(
-                f"<b>RELATÓRIO EXECUTIVO - {tipo_auditoria.upper()} (SHELF SPACE)</b>",
+                f"<b>RELATÓRIO EXECUTIVO - {tipo_auditoria.upper()} (SHELF SPACE){selo_teste}</b>",
                 estilos["Title"],
             )
         )
@@ -772,8 +841,14 @@ def enviar_email_auditoria(assunto, anexos_paths, destinatarios, corpo_email="")
 
 
 # --- MENU LATERAL DE NAVEGAÇÃO ---
+dados_json_nav = carregar_dados_json()
+qtd_oficiais = len(dados_json_nav.get("auditorias", []))
+qtd_testes = len(dados_json_nav.get("testes", []))
+
 st.sidebar.title("🐾 Juiz De Fora audit")
-st.sidebar.caption(f"💾 JSON: `{ARQUIVO_JSON_HISTORICO}`")
+st.sidebar.caption(
+    f"💾 Oficiais: **{qtd_oficiais}** | 🧪 Testes: **{qtd_testes}**"
+)
 menu = st.sidebar.selectbox(
     "Escolha o Módulo:",
     [
@@ -854,7 +929,13 @@ if menu == "📝 Área da Promotora":
                     df_clientes["CIDADE_NORM"] == "JUIZ DE FORA"
                 ].copy()
 
-            # Mantém exatamente a ordem das 10 lojas de Juiz de Fora
+            # Considera como auditadas APENAS auditorias oficiais (ignora testes)
+            codigos_oficiais_auditados = {
+                str(r.get("codigo_loja", "")).strip()
+                for r in dados_json_nav.get("auditorias", [])
+                if not r.get("registro_teste", False)
+            }
+
             lojas_ordenadas = []
             for idx_ord, cod_alvo in enumerate(CODIGOS_JUIZ_DE_FORA_ORDEM, start=1):
                 match = df_jf_base[df_jf_base["COD_NORM"] == cod_alvo]
@@ -863,17 +944,14 @@ if menu == "📝 Área da Promotora":
                     apelido = APELIDOS_POR_CODIGO.get(cod_alvo, nome_cli)
                     lojas_ordenadas.append((idx_ord, cod_alvo, apelido, nome_cli))
 
-            hist_json_atual = carregar_historico_json()
-            codigos_salvos_json = {
-                str(r.get("codigo_loja", "")).strip() for r in hist_json_atual
-            }
-
             st.subheader("2. Seleção da Loja (Ordem Juiz de Fora)")
             if lojas_ordenadas:
                 rotulos = []
                 mapa_rotulo_nome = {}
                 for idx_ord, cod_alvo, apelido, nome_cli in lojas_ordenadas:
-                    marca_json = "✅" if cod_alvo in codigos_salvos_json else "⏳"
+                    marca_json = (
+                        "✅" if cod_alvo in codigos_oficiais_auditados else "⏳"
+                    )
                     rot = f"{marca_json} #{idx_ord:02d} • [{cod_alvo}] {nome_cli} ({apelido})"
                     rotulos.append(rot)
                     mapa_rotulo_nome[rot] = nome_cli
@@ -1284,9 +1362,21 @@ if menu == "📝 Área da Promotora":
                 value=False,
             )
 
+            # FLAG DE TESTE: quando marcada, salva apenas em "testes" e não entra nas auditorias oficiais
+            registrar_como_teste = st.checkbox(
+                "🧪 Registrar como teste (não entra nas auditorias oficiais nem dá baixa na loja)",
+                value=False,
+            )
+            if registrar_como_teste:
+                st.warning(
+                    "Modo TESTE ativado: este registro será marcado com `registro_teste: true`, ficará separado das auditorias oficiais e não será gravado no Google Sheets oficial."
+                )
+
             st.markdown("---")
             if st.button("Finalizar, Salvar e Enviar Auditoria", type="primary"):
-                if opcao_envio == "Somente Benedito":
+                if registrar_como_teste:
+                    destinatarios = ["benedito.bandola@minassal.com.br"]
+                elif opcao_envio == "Somente Benedito":
                     destinatarios = ["benedito.bandola@minassal.com.br"]
                 else:
                     destinatarios = [
@@ -1297,9 +1387,10 @@ if menu == "📝 Área da Promotora":
                         "rubens.porfirio@minassal.com.br",
                     ]
 
-                email_pamela = "pamelaalmeida5@icloud.com"
-                if email_pamela not in destinatarios:
-                    destinatarios.append(email_pamela)
+                if not registrar_como_teste:
+                    email_pamela = "pamelaalmeida5@icloud.com"
+                    if email_pamela not in destinatarios:
+                        destinatarios.append(email_pamela)
 
                 nota_total = 0.0
 
@@ -1468,7 +1559,7 @@ if menu == "📝 Área da Promotora":
                 )
 
                 with st.spinner(
-                    "Gerando PDF, salvando no JSON e enviando e-mail..."
+                    "Gerando PDF, gravando no JSON e processando envio..."
                 ):
                     pdf_path = gerar_pdf_auditoria(
                         tipo_auditoria,
@@ -1480,6 +1571,7 @@ if menu == "📝 Área da Promotora":
                         nota_total,
                         frentes_dados,
                         caminhos_temporarios,
+                        eh_teste=registrar_como_teste,
                     )
 
                     lista_anexos = [pdf_path]
@@ -1512,41 +1604,46 @@ if menu == "📝 Área da Promotora":
                         os.rename(audio_temp_path, audio_novo_path)
                         lista_anexos.append(audio_novo_path)
 
-                    dados_planilha = [
-                        data_atual,
-                        promotora,
-                        cidade_loja,
-                        loja_selecionada,
-                        f"{nota_total:.2f}",
-                        f"{share_cao:.1f}",
-                        f"{share_gato:.1f}",
-                        f"{share_vet:.1f}",
-                        json.dumps(frentes_cao, ensure_ascii=False),
-                        json.dumps(frentes_gato, ensure_ascii=False),
-                        json.dumps(frentes_vet, ensure_ascii=False),
-                        plano_cao,
-                        fluxo_cao,
-                        plano_gato,
-                        fluxo_gato,
-                        sep_fhn,
-                        plano_vet,
-                        fluxo_vet,
-                        json.dumps(materiais_ativos_lista, ensure_ascii=False),
-                        conservacao,
-                        qtd_pontos_extras,
-                        observacoes_promotora.strip(),
-                        json.dumps([]),
-                    ]
+                    # Só grava no Google Sheets oficial se NÃO for teste
+                    if not registrar_como_teste:
+                        dados_planilha = [
+                            data_atual,
+                            promotora,
+                            cidade_loja,
+                            loja_selecionada,
+                            f"{nota_total:.2f}",
+                            f"{share_cao:.1f}",
+                            f"{share_gato:.1f}",
+                            f"{share_vet:.1f}",
+                            json.dumps(frentes_cao, ensure_ascii=False),
+                            json.dumps(frentes_gato, ensure_ascii=False),
+                            json.dumps(frentes_vet, ensure_ascii=False),
+                            plano_cao,
+                            fluxo_cao,
+                            plano_gato,
+                            fluxo_gato,
+                            sep_fhn,
+                            plano_vet,
+                            fluxo_vet,
+                            json.dumps(materiais_ativos_lista, ensure_ascii=False),
+                            conservacao,
+                            qtd_pontos_extras,
+                            observacoes_promotora.strip(),
+                            json.dumps([]),
+                        ]
+                        salvou_sheets = salvar_no_google_sheets(dados_planilha)
+                    else:
+                        salvou_sheets = False
 
-                    salvou_sheets = salvar_no_google_sheets(dados_planilha)
-
-                    assunto = f"📋 Relatório {tipo_auditoria}: {loja_selecionada} ({cidade_loja}) - Nota {nota_total:.2f}"
+                    prefixo_assunto = "[TESTE] " if registrar_como_teste else ""
+                    assunto = f"{prefixo_assunto}📋 Relatório {tipo_auditoria}: {loja_selecionada} ({cidade_loja}) - Nota {nota_total:.2f}"
                     enviado = enviar_email_auditoria(
                         assunto, lista_anexos, destinatarios, corpo_email
                     )
 
                     registro_json = {
                         "id": f"JF_{codigo_loja_atual}_{datetime.now(fuso_sp).strftime('%Y%m%d%H%M%S')}",
+                        "registro_teste": registrar_como_teste,
                         "data_hora": data_atual,
                         "tipo_auditoria": tipo_auditoria,
                         "promotora": promotora,
@@ -1580,25 +1677,31 @@ if menu == "📝 Área da Promotora":
                         "sincronizado_sheets": salvou_sheets,
                         "email_enviado": enviado,
                     }
-                    salvou_json = registrar_no_json(registro_json)
+                    salvou_json = registrar_no_json(
+                        registro_json, eh_teste=registrar_como_teste
+                    )
 
                     if "audio_novo_path" in locals() and os.path.exists(
                         audio_novo_path
                     ):
                         os.remove(audio_novo_path)
 
-                    if salvou_json:
+                    if registrar_como_teste:
                         st.info(
-                            f"💾 Resultado salvo no histórico JSON (`{ARQUIVO_JSON_HISTORICO}`)."
+                            "🧪 Registro salvo apenas na área de **testes** do JSON (`registro_teste: true`). Não foi incluído nas auditorias oficiais."
+                        )
+                    elif salvou_json:
+                        st.info(
+                            f"💾 Auditoria oficial salva no JSON (`{ARQUIVO_JSON_HISTORICO}`) e loja marcada como auditada!"
                         )
 
                     if enviado:
                         st.success(
-                            "✅ Auditoria enviada com sucesso! Observações transcritas e e-mail disparado."
+                            "✅ Relatório PDF gerado e enviado por e-mail!"
                         )
                     else:
                         st.warning(
-                            "⚠️ Auditoria salva no histórico JSON, mas houve falha no envio do e-mail."
+                            "⚠️ Salvo no JSON local (verifique a senha de e-mail nos secrets caso queira disparo automático)."
                         )
 
                     with open(pdf_path, "rb") as f:
@@ -1616,57 +1719,111 @@ elif menu == "📋 Histórico & Feedbacks":
     st.title("📋 Histórico de Auditorias & Feedbacks — Juiz De Fora audit")
     st.markdown("---")
 
-    hist_json = carregar_historico_json()
-    st.subheader(f"💾 Histórico JSON ({len(hist_json)} registro(s))")
-    if hist_json:
-        linhas_json = []
-        for r in reversed(hist_json):
-            sh = r.get("shares", {})
-            linhas_json.append({
-                "Data/Hora": r.get("data_hora", ""),
-                "Tipo": r.get("tipo_auditoria", ""),
-                "Cód.": r.get("codigo_loja", ""),
-                "Loja": r.get("loja", ""),
-                "Nota": r.get("nota_total", 0),
-                "Share Cão": f"{sh.get('cao', 0)}%",
-                "Share Gato": f"{sh.get('gato', 0)}%",
-                "Share Vet": f"{sh.get('vet', 0)}%",
-                "Sheets": "✅" if r.get("sincronizado_sheets") else "⏳",
-                "E-mail": "✅" if r.get("email_enviado") else "⚠️",
-                "Observações": r.get("observacoes", ""),
-            })
-        st.dataframe(pd.DataFrame(linhas_json), use_container_width=True, hide_index=True)
+    dados_json = carregar_dados_json()
+    auditorias_oficiais = dados_json.get("auditorias", [])
+    registros_testes = dados_json.get("testes", [])
+    roteiro_status = dados_json.get("lojas_roteiro", [])
+
+    tab_oficial, tab_roteiro, tab_testes, tab_sheets = st.tabs([
+        f"✅ Auditorias Oficiais ({len(auditorias_oficiais)})",
+        f"📍 Status Roteiro JF ({len(roteiro_status)})",
+        f"🧪 Testes ({len(registros_testes)})",
+        "☁️ Google Sheets",
+    ])
+
+    with tab_oficial:
+        if auditorias_oficiais:
+            linhas_of = []
+            for r in reversed(auditorias_oficiais):
+                sh = r.get("shares", {})
+                linhas_of.append({
+                    "Data/Hora": r.get("data_hora", ""),
+                    "Tipo": r.get("tipo_auditoria", ""),
+                    "Cód.": r.get("codigo_loja", ""),
+                    "Loja": r.get("loja", ""),
+                    "Nota": r.get("nota_total", 0),
+                    "Share Cão": f"{sh.get('cao', 0)}%",
+                    "Share Gato": f"{sh.get('gato', 0)}%",
+                    "Share Vet": f"{sh.get('vet', 0)}%",
+                    "Observações": r.get("observacoes", ""),
+                })
+            st.dataframe(
+                pd.DataFrame(linhas_of), use_container_width=True, hide_index=True
+            )
+        else:
+            st.info(
+                "Nenhuma auditoria oficial registrada ainda (registros de teste não aparecem aqui)."
+            )
 
         st.download_button(
-            "⬇️ Baixar JSON Completo (Backup)",
-            data=json.dumps(
-                {"projeto": "Juiz De Fora audit", "auditorias": hist_json},
-                ensure_ascii=False,
-                indent=2,
-            ).encode("utf-8"),
+            "⬇️ Baixar JSON Oficial (Backup)",
+            data=json.dumps(dados_json, ensure_ascii=False, indent=2).encode("utf-8"),
             file_name="historico_juiz_de_fora_audit.json",
             mime="application/json",
             use_container_width=True,
         )
-    else:
-        st.info("Nenhum registro salvo no JSON ainda.")
 
-    st.markdown("---")
-    st.subheader("☁️ Histórico no Google Sheets")
-    wb = conectar_google_sheets()
-    if wb:
-        try:
-            sheet = wb.worksheet("Historico_Auditorias")
-            dados = sheet.get_all_records()
-            if dados:
-                df_hist = pd.DataFrame(dados)
-                st.dataframe(df_hist.tail(20), use_container_width=True)
-            else:
-                st.info("Nenhuma auditoria registrada até o momento.")
-        except Exception as e:
-            st.error(f"Erro ao ler histórico: {e}")
-    else:
-        st.error("Não foi possível conectar ao Google Sheets.")
+    with tab_roteiro:
+        if roteiro_status:
+            linhas_rot = [
+                {
+                    "Ordem": l.get("ordem"),
+                    "Status": "✅ Auditada"
+                    if l.get("status_visita") == "auditada"
+                    else "⏳ Pendente",
+                    "Código": l.get("codigo_loja"),
+                    "Referência": l.get("apelido"),
+                    "Loja": l.get("loja"),
+                    "Endereço": l.get("endereco"),
+                }
+                for l in roteiro_status
+            ]
+            st.dataframe(
+                pd.DataFrame(linhas_rot), use_container_width=True, hide_index=True
+            )
+        else:
+            st.info(
+                "Coloque o arquivo `historico_juiz_de_fora_audit.json` na pasta do projeto para visualizar o painel de status das 10 lojas."
+            )
+
+    with tab_testes:
+        if registros_testes:
+            linhas_t = [
+                {
+                    "Data/Hora": r.get("data_hora", ""),
+                    "Cód.": r.get("codigo_loja", ""),
+                    "Loja": r.get("loja", ""),
+                    "Nota": r.get("nota_total", 0),
+                    "registro_teste": r.get("registro_teste", True),
+                    "Observações": r.get("observacoes", ""),
+                }
+                for r in reversed(registros_testes)
+            ]
+            st.dataframe(
+                pd.DataFrame(linhas_t), use_container_width=True, hide_index=True
+            )
+            if st.button("🗑️ Limpar todos os testes do JSON"):
+                limpar_testes_json()
+                st.success("Registros de teste removidos com sucesso!")
+                st.rerun()
+        else:
+            st.info("Nenhum registro de teste salvo no momento.")
+
+    with tab_sheets:
+        wb = conectar_google_sheets()
+        if wb:
+            try:
+                sheet = wb.worksheet("Historico_Auditorias")
+                dados = sheet.get_all_records()
+                if dados:
+                    df_hist = pd.DataFrame(dados)
+                    st.dataframe(df_hist.tail(20), use_container_width=True)
+                else:
+                    st.info("Nenhuma auditoria registrada até o momento.")
+            except Exception as e:
+                st.error(f"Erro ao ler histórico: {e}")
+        else:
+            st.error("Não foi possível conectar ao Google Sheets.")
 
 # ==============================================================
 # FLUXO 3: PAINEL ADMIN
