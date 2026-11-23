@@ -1,4 +1,5 @@
 import gc
+import html
 import io
 import json
 import math
@@ -890,6 +891,7 @@ def gerar_pdf_auditoria(
     frentes_dados,
     caminhos_fotos=None,
     eh_teste=False,
+    texto_melhorias_pdf=None,
 ):
     loja_limpa = (
         "".join([c for c in loja if c.isalnum() or c in (" ", "_", "-")])
@@ -943,6 +945,13 @@ def gerar_pdf_auditoria(
         textColor=cor_royal,
         spaceBefore=6,
         spaceAfter=4,
+    )
+    style_melhorias = ParagraphStyle(
+        "EstiloMelhorias",
+        parent=estilos["Normal"],
+        fontSize=9.5,
+        leading=14,
+        textColor=cor_chumbo,
     )
 
     fuso_sp = pytz.timezone("America/Sao_Paulo")
@@ -1235,6 +1244,36 @@ def gerar_pdf_auditoria(
 
         return elem
 
+    def criar_pagina_melhorias():
+        if not texto_melhorias_pdf:
+            return []
+        elem = []
+        elem.append(PageBreak())
+        elem.append(Paragraph("<b>MELHORIAS</b>", style_titulo_exec))
+        elem.append(Spacer(1, 10))
+
+        # Limpa emojis que a fonte Helvetica não desenha e preserva quebras de linha
+        texto_limpo = texto_melhorias_pdf.replace("📊 ", "").replace("🎯 ", "")
+        texto_html = html.escape(texto_limpo).replace("\n", "<br/>")
+
+        t_melhorias = Table(
+            [[Paragraph(texto_html, style_melhorias)]],
+            colWidths=[540],
+        )
+        t_melhorias.setStyle(
+            TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), cor_fundo_suave),
+                ("BOX", (0, 0), (-1, -1), 0.7, cor_borda),
+                ("LINEABOVE", (0, 0), (-1, 0), 2.0, cor_royal),
+                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+            ])
+        )
+        elem.append(t_melhorias)
+        return elem
+
     def adicionar_rodape(canvas, doc):
         canvas.saveState()
         canvas.setFont("Helvetica", 8)
@@ -1253,7 +1292,7 @@ def gerar_pdf_auditoria(
             bottomMargin=28,
         )
         doc_completo.build(
-            criar_pagina_1() + criar_pagina_2(),
+            criar_pagina_1() + criar_pagina_2() + criar_pagina_melhorias(),
             onFirstPage=adicionar_rodape,
             onLaterPages=adicionar_rodape,
         )
@@ -1820,6 +1859,11 @@ if menu == "📝 Área da Promotora":
                 value=True,
             )
 
+            incluir_melhorias_pdf = st.checkbox(
+                "📄 INCLUIR PÁGINA 'MELHORIAS' NO PDF (Adicionar o mesmo conteúdo do corpo do e-mail em uma página do PDF)",
+                value=True,
+            )
+
             registrar_como_teste = st.checkbox(
                 "🧪 Registrar como teste (não entra nas auditorias oficiais nem dá baixa na loja)",
                 value=False,
@@ -1913,6 +1957,7 @@ if menu == "📝 Área da Promotora":
                         frentes_dados,
                         caminhos_temporarios,
                         eh_teste=registrar_como_teste,
+                        texto_melhorias_pdf=corpo_email if incluir_melhorias_pdf else None,
                     )
 
                     lista_anexos = [pdf_path]
@@ -2009,6 +2054,9 @@ if menu == "📝 Área da Promotora":
                             "qtd_pontos_extras": qtd_pontos_extras,
                         },
                         "observacoes": observacoes_promotora.strip(),
+                        "incluir_melhorias_pdf": incluir_melhorias_pdf,
+                        "melhorias_plano_acao": faltas,
+                        "texto_melhorias_email": corpo_email,
                         "destinatarios_envio": destinatarios,
                         "sincronizado_sheets": salvou_sheets,
                         "email_enviado": enviado,
