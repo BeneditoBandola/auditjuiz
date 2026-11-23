@@ -132,7 +132,10 @@ def estrutura_json_padrao() -> dict:
 def carregar_dados_json() -> dict:
     if ARQUIVO_JSON_HISTORICO.exists():
         try:
-            data = json.loads(ARQUIVO_JSON_HISTORICO.read_text(encoding="utf-8"))
+            conteudo = ARQUIVO_JSON_HISTORICO.read_text(encoding="utf-8").strip()
+            if not conteudo:
+                return estrutura_json_padrao()
+            data = json.loads(conteudo)
             if isinstance(data, dict):
                 data.setdefault("projeto", "Auditoria Juiz de Fora 2026")
                 data.setdefault("modo_teste", False)
@@ -1363,6 +1366,15 @@ with col_l2:
 
 st.sidebar.title("🐾 Auditoria Juiz de Fora 2026")
 st.sidebar.caption(f"💾 Oficiais: **{qtd_oficiais}** | 🧪 Testes: **{qtd_testes}**")
+
+if "menu_principal" not in st.session_state:
+    st.session_state["menu_principal"] = "📝 Área da Promotora"
+
+
+def voltar_menu_principal():
+    st.session_state["menu_principal"] = "📝 Área da Promotora"
+
+
 menu = st.sidebar.selectbox(
     "Escolha o Módulo:",
     [
@@ -1370,7 +1382,15 @@ menu = st.sidebar.selectbox(
         "📋 Histórico & Feedbacks",
         "🔒 Painel Admin (Supervisores)",
     ],
+    key="menu_principal",
 )
+
+if menu != "📝 Área da Promotora":
+    st.sidebar.button(
+        "🏠 Voltar ao Menu Principal",
+        on_click=voltar_menu_principal,
+        use_container_width=True,
+    )
 
 # ==============================================================
 # FLUXO 1: ÁREA DA PROMOTORA
@@ -2102,6 +2122,7 @@ if menu == "📝 Área da Promotora":
 # FLUXO 2: HISTÓRICO & FEEDBACKS
 # ==============================================================
 elif menu == "📋 Histórico & Feedbacks":
+    st.button("🏠 Voltar ao Menu Principal", on_click=voltar_menu_principal, key="btn_voltar_hist")
     st.title("📋 Histórico de Auditorias & Feedbacks")
     st.markdown("---")
 
@@ -2276,6 +2297,7 @@ elif menu == "📋 Histórico & Feedbacks":
 # FLUXO 3: PAINEL ADMIN
 # ==============================================================
 elif menu == "🔒 Painel Admin (Supervisores)":
+    st.button("🏠 Voltar ao Menu Principal", on_click=voltar_menu_principal, key="btn_voltar_admin")
     st.title("🔒 Painel Administrativo de Supervisores")
     st.markdown("---")
 
