@@ -117,7 +117,7 @@ MATERIAIS_PADRAO = [
 ]
 
 
-# --- PWA (APP INSTALÁVEL COM NOME E ÍCONE) + ESTILO VISUAL PROFISSIONAL ---
+# --- PWA (APP INSTALÁVEL COM NOME E ÍCONE) + ESTILO VISUAL DE ALTO CONTRASTE ---
 def gerar_icone_pwa_base64() -> str:
     """Gera ícone PNG 512x512 em base64 usando a logo da Royal Canin/Minassal ou emblema padrão."""
     try:
@@ -179,23 +179,85 @@ def injetar_pwa_e_tema_executivo():
 
     css_executivo = """
     <style>
-        /* Fundo executivo limpo e alto contraste para apresentação e campo */
-        [data-testid="stAppViewContainer"] {
+        /* Força esquema claro de alto contraste mesmo se o celular/navegador estiver em Dark Mode */
+        :root {
+            color-scheme: light !important;
+        }
+        [data-testid="stAppViewContainer"], .main, .block-container {
             background-color: #F1F5F9 !important;
+            color: #0F172A !important;
         }
         [data-testid="stHeader"] {
             background-color: #F1F5F9 !important;
         }
         section[data-testid="stSidebar"] {
             background-color: #FFFFFF !important;
-            border-right: 1px solid #E2E8F0 !important;
+            border-right: 1px solid #CBD5E1 !important;
         }
-        /* Cards e expanders com acabamento executivo */
+        section[data-testid="stSidebar"] * {
+            color: #0F172A !important;
+        }
+
+        /* Títulos, labels, textos de rádio, checkboxes e parágrafos sempre em preto/chumbo nítido */
+        .main h1, .main h2, .main h3, .main h4,
+        .main p, .main label, .main span,
+        div[data-testid="stWidgetLabel"] p,
+        div[data-testid="stWidgetLabel"] label,
+        div[data-testid="stRadio"] label p,
+        div[data-testid="stCheckbox"] label p,
+        div[data-testid="stMarkdownContainer"] p,
+        div[data-testid="stMarkdownContainer"] li {
+            color: #0F172A !important;
+        }
+        .main h2, .main h3 {
+            font-weight: 800 !important;
+        }
+
+        /* Caixas de texto, números (frentes) e selects com fundo branco e borda visível */
+        div[data-baseweb="input"],
+        div[data-baseweb="base-input"],
+        div[data-baseweb="select"] > div,
+        textarea,
+        input {
+            background-color: #FFFFFF !important;
+            color: #0F172A !important;
+            border-color: #94A3B8 !important;
+        }
+        div[data-baseweb="input"] input,
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] div {
+            color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
+            font-weight: 600 !important;
+        }
+        /* Botões + e - do number_input no celular */
+        div[data-testid="stNumberInput"] button {
+            background-color: #E2E8F0 !important;
+            color: #0F172A !important;
+            border-color: #94A3B8 !important;
+        }
+        div[data-testid="stNumberInput"] button svg {
+            fill: #0F172A !important;
+        }
+
+        /* Menu suspenso (dropdown) ao abrir no celular */
+        div[data-baseweb="popover"],
+        div[data-baseweb="menu"],
+        ul[role="listbox"],
+        li[role="option"] {
+            background-color: #FFFFFF !important;
+            color: #0F172A !important;
+        }
+        li[role="option"]:hover {
+            background-color: #E2E8F0 !important;
+        }
+
+        /* Cards, metrics e expanders */
         div[data-testid="stExpander"] {
             background-color: #FFFFFF !important;
             border: 1px solid #CBD5E1 !important;
             border-radius: 10px !important;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05) !important;
         }
         div[data-testid="stMetric"] {
             background-color: #FFFFFF !important;
@@ -203,8 +265,26 @@ def injetar_pwa_e_tema_executivo():
             border-top: 4px solid #E2001A !important;
             border-radius: 10px !important;
             padding: 12px 14px !important;
-            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05) !important;
         }
+        div[data-testid="stMetric"] * {
+            color: #0F172A !important;
+        }
+
+        /* Botões secundários e de link (Google Maps, Zerar Rascunho, etc.) */
+        div.stButton > button:not([kind="primary"]),
+        div[data-testid="stLinkButton"] > a {
+            background-color: #FFFFFF !important;
+            color: #0F172A !important;
+            border: 1.5px solid #94A3B8 !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+        }
+        div.stButton > button:not([kind="primary"]) *,
+        div[data-testid="stLinkButton"] > a * {
+            color: #0F172A !important;
+        }
+
         /* Botões primários em vermelho Royal Canin */
         div.stButton > button[kind="primary"] {
             background: linear-gradient(135deg, #E2001A 0%, #B91C1C 100%) !important;
@@ -214,14 +294,15 @@ def injetar_pwa_e_tema_executivo():
             padding: 0.65rem 1.2rem !important;
             box-shadow: 0 4px 10px rgba(226, 0, 26, 0.25) !important;
         }
-        div.stButton > button[kind="primary"]:hover {
-            filter: brightness(1.05) !important;
+        div.stButton > button[kind="primary"] * {
+            color: #FFFFFF !important;
         }
+
         /* Banner executivo superior */
         .banner-executivo {
             background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
             border-bottom: 4px solid #E2001A;
-            color: #FFFFFF;
+            color: #FFFFFF !important;
             padding: 18px 20px;
             border-radius: 12px;
             margin-bottom: 14px;
@@ -234,16 +315,16 @@ def injetar_pwa_e_tema_executivo():
             font-weight: 800 !important;
         }
         .banner-executivo p {
-            color: #CBD5E1 !important;
+            color: #E2E8F0 !important;
             font-size: 0.88rem !important;
             margin: 0 !important;
         }
+
         /* Alerta de trava da loja ativa */
         .trava-loja-alerta {
-            background-color: #FEF2F2;
-            border: 2px solid #E2001A;
-            border-left: 8px solid #E2001A;
-            color: #7F1D1D;
+            background-color: #FEF2F2 !important;
+            border: 2px solid #E2001A !important;
+            border-left: 8px solid #E2001A !important;
             padding: 14px 16px;
             border-radius: 10px;
             margin: 10px 0 14px 0;
@@ -254,20 +335,20 @@ def injetar_pwa_e_tema_executivo():
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #B91C1C;
+            color: #B91C1C !important;
             margin-bottom: 4px;
         }
         .trava-loja-alerta .nome-loja-trava {
             font-size: 18px;
             font-weight: 900;
-            color: #0F172A;
+            color: #0F172A !important;
             margin-bottom: 4px;
         }
         .badge-autosave {
             display: inline-block;
-            background-color: #ECFDF5;
-            color: #065F46;
-            border: 1px solid #A7F3D0;
+            background-color: #ECFDF5 !important;
+            color: #065F46 !important;
+            border: 1px solid #A7F3D0 !important;
             padding: 4px 10px;
             border-radius: 20px;
             font-size: 12px;
@@ -1882,7 +1963,7 @@ if menu == "📝 Área da Promotora":
             # Chave única do rascunho para esta loja + tipo de auditoria
             chave_rascunho_atual = f"{tipo_auditoria}__{codigo_loja_atual}__{loja_selecionada}"
 
-            # Sempre que abrir ou trocar de loja, carrega o rascunho exclusivo dela (sem misturar com outras lojas)
+            # Sempre que abrir ou trocar de loja, carrega o rascunho exclusivo dela
             if st.session_state.get("chave_rascunho_carregada") != chave_rascunho_atual:
                 rascunho_existente = obter_rascunho_loja(chave_rascunho_atual)
                 carregar_estado_rascunho_na_sessao(chave_rascunho_atual, rascunho_existente)
@@ -1928,7 +2009,6 @@ if menu == "📝 Área da Promotora":
                     carregar_estado_rascunho_na_sessao(chave_rascunho_atual, None)
                     st.rerun()
 
-            # Aviso se já existir auditoria oficial gravada para esta loja
             ja_auditada_oficial = any(
                 str(r.get("codigo_loja", "")).strip() == codigo_loja_atual
                 for r in dados_json_nav.get("auditorias", [])
@@ -2473,7 +2553,6 @@ if menu == "📝 Área da Promotora":
                         registro_json, eh_teste=registrar_como_teste
                     )
 
-                    # Remove o rascunho da loja após concluir o salvamento
                     if salvou_json:
                         limpar_rascunho_loja(chave_rascunho_atual)
 
