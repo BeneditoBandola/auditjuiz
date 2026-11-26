@@ -198,14 +198,17 @@ def injetar_pwa_e_tema_executivo():
             color: #0F172A !important;
         }
 
-        /* Títulos, labels, textos de rádio, checkboxes e parágrafos sempre em preto/chumbo nítido */
-        .main h1, .main h2, .main h3, .main h4,
-        .main p, .main label, .main span,
+        /* Títulos, labels, textos de rádio, checkboxes e parágrafos fora do banner escuro */
+        .main h1:not(.banner-executivo h1),
+        .main h2, .main h3, .main h4,
+        .main p:not(.banner-executivo p),
+        .main label,
+        .main span:not([data-testid="stMetricDelta"] *):not(.banner-executivo *),
         div[data-testid="stWidgetLabel"] p,
         div[data-testid="stWidgetLabel"] label,
         div[data-testid="stRadio"] label p,
         div[data-testid="stCheckbox"] label p,
-        div[data-testid="stMarkdownContainer"] p,
+        div[data-testid="stMarkdownContainer"] p:not(.banner-executivo p),
         div[data-testid="stMarkdownContainer"] li {
             color: #0F172A !important;
         }
@@ -252,33 +255,49 @@ def injetar_pwa_e_tema_executivo():
             background-color: #E2E8F0 !important;
         }
 
-        /* Caixa st.info / alertas em tema claro de alto contraste */
-        div[data-testid="stAlert"] {
+        /* Caixas de aviso / st.info / st.warning em tema claro de alto contraste */
+        div[data-testid="stAlert"],
+        div[data-testid="stNotification"],
+        div.stAlert {
             background-color: #EFF6FF !important;
-            color: #1E3A8A !important;
+            color: #0F172A !important;
             border: 1px solid #93C5FD !important;
             border-radius: 10px !important;
         }
-        div[data-testid="stAlert"] * {
-            color: #1E3A8A !important;
+        div[data-testid="stAlert"] *,
+        div[data-testid="stNotification"] *,
+        div.stAlert * {
+            color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
         }
 
-        /* File uploader (dropzone e botão Upload) em fundo branco nítido */
+        /* File uploader (dropzone e botão Upload) com alto contraste */
         div[data-testid="stFileUploaderDropzone"],
         div[data-testid="stFileUploader"] section {
             background-color: #FFFFFF !important;
             color: #0F172A !important;
-            border: 1.5px dashed #94A3B8 !important;
+            border: 1.5px dashed #64748B !important;
             border-radius: 10px !important;
         }
-        div[data-testid="stFileUploaderDropzone"] *,
-        div[data-testid="stFileUploader"] section * {
+        div[data-testid="stFileUploaderDropzone"] span,
+        div[data-testid="stFileUploaderDropzone"] small,
+        div[data-testid="stFileUploaderDropzone"] div,
+        div[data-testid="stFileUploader"] section span,
+        div[data-testid="stFileUploader"] section small {
             color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
         }
-        div[data-testid="stFileUploaderDropzone"] button {
-            background-color: #F8FAFC !important;
+        div[data-testid="stFileUploaderDropzone"] button,
+        div[data-testid="stFileUploader"] button {
+            background-color: #E2E8F0 !important;
             color: #0F172A !important;
             border: 1px solid #64748B !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stFileUploaderDropzone"] button *,
+        div[data-testid="stFileUploader"] button * {
+            color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
         }
 
         /* Gravador de áudio (st.audio_input) em fundo claro com alto contraste */
@@ -296,7 +315,7 @@ def injetar_pwa_e_tema_executivo():
             fill: #0F172A !important;
         }
 
-        /* Cards, metrics e expanders */
+        /* Cards, metrics e badges de variação (delta) */
         div[data-testid="stExpander"] {
             background-color: #FFFFFF !important;
             border: 1px solid #CBD5E1 !important;
@@ -311,8 +330,21 @@ def injetar_pwa_e_tema_executivo():
             padding: 12px 14px !important;
             box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05) !important;
         }
-        div[data-testid="stMetric"] * {
+        div[data-testid="stMetricLabel"] *,
+        div[data-testid="stMetricValue"] * {
             color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
+        }
+        div[data-testid="stMetricDelta"] {
+            background-color: #F1F5F9 !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 999px !important;
+            padding: 2px 8px !important;
+        }
+        div[data-testid="stMetricDelta"] * {
+            color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
+            font-weight: 700 !important;
         }
 
         /* Botões secundários e de link (Google Maps, Zerar Rascunho, etc.) */
@@ -327,6 +359,7 @@ def injetar_pwa_e_tema_executivo():
         div.stButton > button:not([kind="primary"]) *,
         div[data-testid="stLinkButton"] > a * {
             color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
         }
 
         /* Botões primários em vermelho Royal Canin */
@@ -340,28 +373,31 @@ def injetar_pwa_e_tema_executivo():
         }
         div.stButton > button[kind="primary"] * {
             color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
         }
 
         /* Banner executivo superior */
-        .banner-executivo {
-            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-            border-bottom: 4px solid #E2001A;
-            color: #FFFFFF !important;
-            padding: 18px 20px;
-            border-radius: 12px;
-            margin-bottom: 14px;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+        div.banner-executivo {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+            border-bottom: 4px solid #E2001A !important;
+            padding: 18px 20px !important;
+            border-radius: 12px !important;
+            margin-bottom: 14px !important;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
         }
-        .banner-executivo h1 {
+        div.banner-executivo h1 {
             color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
             font-size: 1.55rem !important;
             margin: 0 0 4px 0 !important;
             font-weight: 800 !important;
         }
-        .banner-executivo p {
-            color: #E2E8F0 !important;
-            font-size: 0.88rem !important;
+        div.banner-executivo p {
+            color: #F1F5F9 !important;
+            -webkit-text-fill-color: #F1F5F9 !important;
+            font-size: 0.9rem !important;
             margin: 0 !important;
+            font-weight: 500 !important;
         }
 
         /* Alerta de trava da loja ativa */
@@ -380,18 +416,21 @@ def injetar_pwa_e_tema_executivo():
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: #B91C1C !important;
+            -webkit-text-fill-color: #B91C1C !important;
             margin-bottom: 4px;
         }
         .trava-loja-alerta .nome-loja-trava {
             font-size: 18px;
             font-weight: 900;
             color: #0F172A !important;
+            -webkit-text-fill-color: #0F172A !important;
             margin-bottom: 4px;
         }
         .badge-autosave {
             display: inline-block;
             background-color: #ECFDF5 !important;
             color: #065F46 !important;
+            -webkit-text-fill-color: #065F46 !important;
             border: 1px solid #A7F3D0 !important;
             padding: 4px 10px;
             border-radius: 20px;
