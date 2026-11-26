@@ -252,6 +252,50 @@ def injetar_pwa_e_tema_executivo():
             background-color: #E2E8F0 !important;
         }
 
+        /* Caixa st.info / alertas em tema claro de alto contraste */
+        div[data-testid="stAlert"] {
+            background-color: #EFF6FF !important;
+            color: #1E3A8A !important;
+            border: 1px solid #93C5FD !important;
+            border-radius: 10px !important;
+        }
+        div[data-testid="stAlert"] * {
+            color: #1E3A8A !important;
+        }
+
+        /* File uploader (dropzone e botão Upload) em fundo branco nítido */
+        div[data-testid="stFileUploaderDropzone"],
+        div[data-testid="stFileUploader"] section {
+            background-color: #FFFFFF !important;
+            color: #0F172A !important;
+            border: 1.5px dashed #94A3B8 !important;
+            border-radius: 10px !important;
+        }
+        div[data-testid="stFileUploaderDropzone"] *,
+        div[data-testid="stFileUploader"] section * {
+            color: #0F172A !important;
+        }
+        div[data-testid="stFileUploaderDropzone"] button {
+            background-color: #F8FAFC !important;
+            color: #0F172A !important;
+            border: 1px solid #64748B !important;
+        }
+
+        /* Gravador de áudio (st.audio_input) em fundo claro com alto contraste */
+        div[data-testid="stAudioInput"],
+        div[data-testid="stAudioInput"] > div,
+        div[data-testid="stAudioInput"] section {
+            background-color: #FFFFFF !important;
+            color: #0F172A !important;
+            border: 1.5px solid #94A3B8 !important;
+            border-radius: 10px !important;
+        }
+        div[data-testid="stAudioInput"] *,
+        div[data-testid="stAudioInput"] svg {
+            color: #0F172A !important;
+            fill: #0F172A !important;
+        }
+
         /* Cards, metrics e expanders */
         div[data-testid="stExpander"] {
             background-color: #FFFFFF !important;
