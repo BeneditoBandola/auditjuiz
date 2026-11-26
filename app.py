@@ -1,3 +1,4 @@
+import base64
 import gc
 import html
 import io
@@ -53,6 +54,7 @@ st.set_page_config(
 
 # --- CONSTANTES, LOGOS E ARQUIVOS ---
 ARQUIVO_JSON_HISTORICO = Path("historico_juiz_de_fora_audit.json")
+ARQUIVO_JSON_RASCUNHOS = Path("rascunho_auditoria_jf.json")
 NOME_PLANILHA_SHEETS = "Juiz_De_Fora_Audit"
 LOGO_MINASSAL = "logo_minassal.jpg"
 LOGO_ROYAL = "logo_royal.png"
@@ -113,6 +115,272 @@ MATERIAIS_PADRAO = [
     "Stopper",
     "Outros materiais",
 ]
+
+
+# --- PWA (APP INSTALÁVEL COM NOME E ÍCONE) + ESTILO VISUAL PROFISSIONAL ---
+def gerar_icone_pwa_base64() -> str:
+    """Gera ícone PNG 512x512 em base64 usando a logo da Royal Canin/Minassal ou emblema padrão."""
+    try:
+        canvas = PILImage.new("RGB", (512, 512), (226, 0, 26))
+        origem_logo = LOGO_ROYAL if os.path.exists(LOGO_ROYAL) else (
+            LOGO_MINASSAL if os.path.exists(LOGO_MINASSAL) else None
+        )
+        if origem_logo:
+            with PILImage.open(origem_logo) as logo:
+                logo = ImageOps.exif_transpose(logo).convert("RGBA")
+                logo.thumbnail((380, 380))
+                fundo_branco = PILImage.new("RGB", (440, 440), (255, 255, 255))
+                pos_x = (440 - logo.width) // 2
+                pos_y = (440 - logo.height) // 2
+                fundo_branco.paste(logo, (pos_x, pos_y), logo)
+                canvas.paste(fundo_branco, (36, 36))
+        buf = io.BytesIO()
+        canvas.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
+    except Exception:
+        return ""
+
+
+def injetar_pwa_e_tema_executivo():
+    icone_b64 = gerar_icone_pwa_base64()
+    icon_data_url = f"data:image/png;base64,{icone_b64}" if icone_b64 else ""
+
+    manifest_obj = {
+        "name": "Auditoria Juiz de Fora 2026",
+        "short_name": "Auditoria JF",
+        "description": "Auditoria de Execução e Shelf Space • Minassal / Royal Canin",
+        "start_url": ".",
+        "display": "standalone",
+        "background_color": "#F1F5F9",
+        "theme_color": "#E2001A",
+        "orientation": "portrait",
+        "icons": [
+            {
+                "src": icon_data_url,
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable",
+            }
+        ] if icon_data_url else [],
+    }
+    manifest_b64 = base64.b64encode(
+        json.dumps(manifest_obj, ensure_ascii=False).encode("utf-8")
+    ).decode("utf-8")
+
+    pwa_tags = f"""
+    <link rel="manifest" href="data:application/manifest+json;base64,{manifest_b64}">
+    <meta name="theme-color" content="#E2001A">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Auditoria JF">
+    """
+    if icon_data_url:
+        pwa_tags += f'<link rel="apple-touch-icon" href="{icon_data_url}">'
+
+    css_executivo = """
+    <style>
+        /* Fundo executivo limpo e alto contraste para apresentação e campo */
+        [data-testid="stAppViewContainer"] {
+            background-color: #F1F5F9 !important;
+        }
+        [data-testid="stHeader"] {
+            background-color: #F1F5F9 !important;
+        }
+        section[data-testid="stSidebar"] {
+            background-color: #FFFFFF !important;
+            border-right: 1px solid #E2E8F0 !important;
+        }
+        /* Cards e expanders com acabamento executivo */
+        div[data-testid="stExpander"] {
+            background-color: #FFFFFF !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 10px !important;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+        }
+        div[data-testid="stMetric"] {
+            background-color: #FFFFFF !important;
+            border: 1px solid #CBD5E1 !important;
+            border-top: 4px solid #E2001A !important;
+            border-radius: 10px !important;
+            padding: 12px 14px !important;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+        }
+        /* Botões primários em vermelho Royal Canin */
+        div.stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, #E2001A 0%, #B91C1C 100%) !important;
+            border: none !important;
+            border-radius: 10px !important;
+            font-weight: 700 !important;
+            padding: 0.65rem 1.2rem !important;
+            box-shadow: 0 4px 10px rgba(226, 0, 26, 0.25) !important;
+        }
+        div.stButton > button[kind="primary"]:hover {
+            filter: brightness(1.05) !important;
+        }
+        /* Banner executivo superior */
+        .banner-executivo {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border-bottom: 4px solid #E2001A;
+            color: #FFFFFF;
+            padding: 18px 20px;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+        }
+        .banner-executivo h1 {
+            color: #FFFFFF !important;
+            font-size: 1.55rem !important;
+            margin: 0 0 4px 0 !important;
+            font-weight: 800 !important;
+        }
+        .banner-executivo p {
+            color: #CBD5E1 !important;
+            font-size: 0.88rem !important;
+            margin: 0 !important;
+        }
+        /* Alerta de trava da loja ativa */
+        .trava-loja-alerta {
+            background-color: #FEF2F2;
+            border: 2px solid #E2001A;
+            border-left: 8px solid #E2001A;
+            color: #7F1D1D;
+            padding: 14px 16px;
+            border-radius: 10px;
+            margin: 10px 0 14px 0;
+            box-shadow: 0 2px 8px rgba(226, 0, 26, 0.12);
+        }
+        .trava-loja-alerta .titulo-trava {
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #B91C1C;
+            margin-bottom: 4px;
+        }
+        .trava-loja-alerta .nome-loja-trava {
+            font-size: 18px;
+            font-weight: 900;
+            color: #0F172A;
+            margin-bottom: 4px;
+        }
+        .badge-autosave {
+            display: inline-block;
+            background-color: #ECFDF5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+    </style>
+    """
+    st.markdown(pwa_tags + css_executivo, unsafe_allow_html=True)
+
+
+injetar_pwa_e_tema_executivo()
+
+
+# --- AUTO-SAVE CONTÍNUO EM JSON PARA RASCUNHO DE CAMPO (ANTI-PERDA / SEM REDE) ---
+def carregar_rascunhos_json() -> dict:
+    if ARQUIVO_JSON_RASCUNHOS.exists():
+        try:
+            raw = ARQUIVO_JSON_RASCUNHOS.read_text(encoding="utf-8").strip()
+            if raw:
+                data = json.loads(raw)
+                if isinstance(data, dict):
+                    data.setdefault("ultima_loja_ativa", {})
+                    data.setdefault("rascunhos", {})
+                    return data
+        except Exception:
+            pass
+    return {"ultima_loja_ativa": {}, "rascunhos": {}}
+
+
+def _gravar_rascunhos_json(payload: dict) -> None:
+    try:
+        ARQUIVO_JSON_RASCUNHOS.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    except Exception:
+        pass
+
+
+def salvar_ultima_loja_ativa(promotora: str, tipo_auditoria: str, codigo_loja: str, nome_loja: str) -> None:
+    payload = carregar_rascunhos_json()
+    payload["ultima_loja_ativa"] = {
+        "promotora": promotora,
+        "tipo_auditoria": tipo_auditoria,
+        "codigo_loja": codigo_loja,
+        "nome_loja": nome_loja,
+        "atualizado_em": datetime.now(pytz.timezone("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S"),
+    }
+    _gravar_rascunhos_json(payload)
+
+
+def salvar_rascunho_loja(chave_rascunho: str, estado_loja: dict) -> str:
+    agora_str = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S")
+    payload = carregar_rascunhos_json()
+    payload["rascunhos"][chave_rascunho] = {
+        "salvo_em": agora_str,
+        "dados": estado_loja,
+    }
+    _gravar_rascunhos_json(payload)
+    return agora_str
+
+
+def obter_rascunho_loja(chave_rascunho: str) -> dict | None:
+    payload = carregar_rascunhos_json()
+    return payload.get("rascunhos", {}).get(chave_rascunho)
+
+
+def limpar_rascunho_loja(chave_rascunho: str) -> None:
+    payload = carregar_rascunhos_json()
+    if chave_rascunho in payload.get("rascunhos", {}):
+        del payload["rascunhos"][chave_rascunho]
+        _gravar_rascunhos_json(payload)
+
+
+def rascunho_tem_dados_preenchidos(dados: dict) -> bool:
+    if not dados:
+        return False
+    soma_cao = sum(dados.get("frentes_cao", {}).values())
+    soma_gato = sum(dados.get("frentes_gato", {}).values())
+    soma_vet = sum(dados.get("frentes_vet", {}).values())
+    qtd_mat = len(dados.get("materiais_ativos", []))
+    extras = int(dados.get("qtd_extras", 0))
+    obs = str(dados.get("observacoes", "")).strip()
+    return (soma_cao + soma_gato + soma_vet + qtd_mat + extras) > 0 or bool(obs)
+
+
+def carregar_estado_rascunho_na_sessao(chave_rascunho: str, rascunho_entry: dict | None) -> None:
+    dados = (rascunho_entry or {}).get("dados", {})
+
+    for m in MARCAS_PADRAO:
+        st.session_state[f"cao_{m}"] = int(dados.get("frentes_cao", {}).get(m, 0))
+        st.session_state[f"gato_{m}"] = int(dados.get("frentes_gato", {}).get(m, 0))
+        st.session_state[f"vet_{m}"] = int(dados.get("frentes_vet", {}).get(m, 0))
+
+    st.session_state["plano_cao"] = dados.get("plano_cao", "Sim") if dados.get("plano_cao") in ("Sim", "Não") else "Sim"
+    st.session_state["fluxo_cao"] = dados.get("fluxo_cao", "Sim") if dados.get("fluxo_cao") in ("Sim", "Não") else "Sim"
+    st.session_state["plano_gato"] = dados.get("plano_gato", "Sim") if dados.get("plano_gato") in ("Sim", "Não") else "Sim"
+    st.session_state["fluxo_gato"] = dados.get("fluxo_gato", "Sim") if dados.get("fluxo_gato") in ("Sim", "Não") else "Sim"
+    st.session_state["sep_fhn"] = dados.get("sep_fhn", "Sim") if dados.get("sep_fhn") in ("Sim", "Não") else "Sim"
+    st.session_state["plano_vet"] = dados.get("plano_vet", "Sim") if dados.get("plano_vet") in ("Sim", "Não") else "Sim"
+    st.session_state["fluxo_vet"] = dados.get("fluxo_vet", "Sim") if dados.get("fluxo_vet") in ("Sim", "Não") else "Sim"
+
+    mats_salvos = set(dados.get("materiais_ativos", []))
+    for mat in MATERIAIS_PADRAO:
+        st.session_state[f"mat_{mat}"] = mat in mats_salvos
+
+    cons_salva = dados.get("conservacao", "Sim")
+    st.session_state["conservacao"] = cons_salva if cons_salva in ("Sim", "Não") else "Sim"
+    st.session_state["qtd_pontos_extras"] = int(dados.get("qtd_extras", 0))
+    st.session_state["texto_transcrito_voz"] = str(dados.get("observacoes", ""))
+    st.session_state["obs_campo_texto"] = str(dados.get("observacoes", ""))
+    st.session_state["chave_rascunho_carregada"] = chave_rascunho
+    st.session_state["confirmar_loja_correta"] = False
 
 
 # --- GESTÃO DO JSON OFICIAL + TESTES SEPARADOS ---
@@ -294,10 +562,6 @@ df_clientes = load_clients()
 def otimizar_imagem_upload(
     arquivo_upload, max_lado: int = 1280, qualidade: int = 82
 ) -> str | None:
-    """
-    Lê o arquivo enviado, corrige orientação EXIF, redimensiona para caber em max_lado
-    e salva em JPEG leve em arquivo temporário. Libera memória imediatamente.
-    """
     try:
         raw_bytes = arquivo_upload.getvalue()
         if not raw_bytes:
@@ -325,10 +589,6 @@ def otimizar_imagem_upload(
 
 
 def processar_fotos_com_cache(arquivos_fotos) -> list[str]:
-    """
-    Evita reprocessar todas as fotos a cada clique na interface.
-    Processa cada foto uma única vez e limpa automaticamente arquivos de fotos removidas.
-    """
     if "cache_fotos_processadas" not in st.session_state:
         st.session_state["cache_fotos_processadas"] = {}
 
@@ -351,7 +611,6 @@ def processar_fotos_com_cache(arquivos_fotos) -> list[str]:
                     cache[chave] = novo_caminho
                     caminhos_validos.append(novo_caminho)
 
-    # Limpa arquivos temporários de fotos que o usuário desmarcou
     chaves_removidas = [k for k in list(cache.keys()) if k not in chaves_atuais]
     for k in chaves_removidas:
         arq_antigo = cache.pop(k, None)
@@ -842,12 +1101,9 @@ def gerar_grafico_share_pdf(share_cao: float, share_gato: float, share_vet: floa
         fig, ax = plt.subplots(figsize=(6.8, 2.3), dpi=200)
         y_pos = [2, 1, 0]
 
-        # Barra de fundo (100%)
         ax.barh(y_pos, [100, 100, 100], height=0.52, color="#F3F4F6", edgecolor="#E5E7EB")
-        # Barra de share atual
         ax.barh(y_pos, [min(v, 100) for v in valores], height=0.52, color=cores_barras)
 
-        # Marcadores de meta
         for y, meta, val in zip(y_pos, metas, valores):
             ax.plot([meta, meta], [y - 0.34, y + 0.34], color="#1F2937", linewidth=2.2, linestyle="--")
             status = "✓ Meta" if val >= meta else f"Meta {meta:.0f}%"
@@ -882,11 +1138,13 @@ def gerar_grafico_share_pdf(share_cao: float, share_gato: float, share_vet: floa
         return None
 
 
-# --- GERAR PDF EXECUTIVO COM LOGOS ---
+# --- GERAR PDF EXECUTIVO COM LOGOS E CNPJ ---
 def gerar_pdf_auditoria(
     tipo_auditoria,
     promotora,
     loja,
+    cnpj,
+    codigo_loja,
     cidade,
     endereco,
     dados_completos,
@@ -978,7 +1236,6 @@ def gerar_pdf_auditoria(
         elem = []
         selo_teste = " <font color='#E2001A'>[TESTE]</font>" if eh_teste else ""
 
-        # Cabeçalho Co-branding (Minassal | Título | Royal Canin)
         logo_esq = carregar_logo_rl(LOGO_MINASSAL, 85, 42, "MINASSAL")
         logo_dir = carregar_logo_rl(LOGO_ROYAL, 90, 42, "ROYAL CANIN")
         titulo_centro = Paragraph(
@@ -1001,12 +1258,14 @@ def gerar_pdf_auditoria(
         elem.append(t_header)
         elem.append(Spacer(1, 8))
 
-        # Bloco Resumo do PDV + Destaque da Nota
         cor_nota = "#059669" if nota_total >= 8.0 else ("#D97706" if nota_total >= 6.0 else "#E2001A")
+        cod_txt = f" (Cód.: {html.escape(str(codigo_loja))})" if codigo_loja else ""
+        cnpj_txt = html.escape(str(cnpj)) if cnpj else "Não informado"
         info_pdv = Paragraph(
-            f"<b>LOJA:</b> {loja}<br/>"
-            f"<b>CIDADE:</b> {cidade} &nbsp;|&nbsp; <b>ENDEREÇO:</b> {endereco}<br/>"
-            f"<b>RESPONSÁVEL:</b> {promotora} &nbsp;|&nbsp; <b>DATA/HORA:</b> {agora}",
+            f"<b>LOJA:</b> {html.escape(str(loja))}{cod_txt}<br/>"
+            f"<b>CNPJ:</b> <font color='#E2001A'><b>{cnpj_txt}</b></font><br/>"
+            f"<b>CIDADE:</b> {html.escape(str(cidade))} &nbsp;|&nbsp; <b>ENDEREÇO:</b> {html.escape(str(endereco))}<br/>"
+            f"<b>RESPONSÁVEL:</b> {html.escape(str(promotora))} &nbsp;|&nbsp; <b>DATA/HORA:</b> {agora}",
             style_celula,
         )
         box_nota = Paragraph(
@@ -1032,7 +1291,6 @@ def gerar_pdf_auditoria(
         elem.append(t_resumo)
         elem.append(Spacer(1, 8))
 
-        # 1. Performance de Share
         elem.append(Paragraph("<b>1. PERFORMANCE DE SHARE POR PILAR</b>", style_secao))
 
         if caminho_grafico_temp and os.path.exists(caminho_grafico_temp):
@@ -1071,7 +1329,6 @@ def gerar_pdf_auditoria(
             elem.append(t_share)
             elem.append(Spacer(1, 6))
 
-        # 2. Checklist de Execução
         elem.append(Paragraph("<b>2. CHECKLIST DE EXECUÇÃO</b>", style_secao))
         data_exec = [
             [
@@ -1113,7 +1370,6 @@ def gerar_pdf_auditoria(
         elem.append(t_exec)
         elem.append(Spacer(1, 6))
 
-        # 3. Merchandising e Pontos Extras
         elem.append(Paragraph("<b>3. MERCHANDISING E PONTOS EXTRAS</b>", style_secao))
         mat_ativos = dados_completos.get("materiais_ativos", [])
         materiais_str = ", ".join(mat_ativos) if mat_ativos else "Nenhum material assinalado"
@@ -1150,11 +1406,10 @@ def gerar_pdf_auditoria(
         elem.append(t_merch)
         elem.append(Spacer(1, 6))
 
-        # 4. Observações
         if dados_completos.get("observacoes"):
             elem.append(Paragraph("<b>4. OBSERVAÇÕES DA VISITA</b>", style_secao))
             t_obs = Table(
-                [[Paragraph(dados_completos["observacoes"], style_celula)]],
+                [[Paragraph(html.escape(dados_completos["observacoes"]), style_celula)]],
                 colWidths=[540],
             )
             t_obs.setStyle(
@@ -1202,7 +1457,6 @@ def gerar_pdf_auditoria(
             ("TOPPADDING", (0, 0), (-1, -1), 5),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ("ALIGN", (1, 1), (-1, -1), "CENTER"),
-            # Destaque suave para a linha Royal Canin (última linha)
             ("BACKGROUND", (0, len(MARCAS_PADRAO)), (-1, len(MARCAS_PADRAO)), colors.HexColor("#FEF2F2")),
         ]
         t_frentes.setStyle(TableStyle(estilos_tab))
@@ -1255,7 +1509,6 @@ def gerar_pdf_auditoria(
         elem.append(Paragraph("<b>MELHORIAS</b>", style_titulo_exec))
         elem.append(Spacer(1, 10))
 
-        # Limpa emojis que a fonte Helvetica não desenha e preserva quebras de linha
         texto_limpo = texto_melhorias_pdf.replace("📊 ", "").replace("🎯 ", "")
         texto_html = html.escape(texto_limpo).replace("\n", "<br/>")
 
@@ -1281,7 +1534,7 @@ def gerar_pdf_auditoria(
         canvas.saveState()
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(colors.HexColor("#6B7280"))
-        canvas.drawString(25, 15, f"Minassal Distribuidora • Royal Canin | {loja}")
+        canvas.drawString(25, 15, f"Minassal Distribuidora • Royal Canin | {loja} | CNPJ: {cnpj}")
         canvas.drawRightString(A4[0] - 25, 15, "Desenvolvido por Benedito Bandola")
         canvas.restoreState()
 
@@ -1353,8 +1606,12 @@ def enviar_email_auditoria(assunto, anexos_paths, destinatarios, corpo_email="")
 
 # --- MENU LATERAL DE NAVEGAÇÃO (COM LOGOS) ---
 dados_json_nav = carregar_dados_json()
+rascunhos_nav = carregar_rascunhos_json().get("rascunhos", {})
 qtd_oficiais = len(dados_json_nav.get("auditorias", []))
 qtd_testes = len(dados_json_nav.get("testes", []))
+qtd_rascunhos = sum(
+    1 for item in rascunhos_nav.values() if rascunho_tem_dados_preenchidos(item.get("dados", {}))
+)
 
 col_l1, col_l2 = st.sidebar.columns(2)
 with col_l1:
@@ -1365,7 +1622,9 @@ with col_l2:
         st.image(LOGO_ROYAL, use_container_width=True)
 
 st.sidebar.title("🐾 Auditoria Juiz de Fora 2026")
-st.sidebar.caption(f"💾 Oficiais: **{qtd_oficiais}** | 🧪 Testes: **{qtd_testes}**")
+st.sidebar.caption(
+    f"💾 Oficiais: **{qtd_oficiais}** | 📝 Rascunhos: **{qtd_rascunhos}** | 🧪 Testes: **{qtd_testes}**"
+)
 
 if "menu_principal" not in st.session_state:
     st.session_state["menu_principal"] = "📝 Área da Promotora"
@@ -1396,8 +1655,15 @@ if menu != "📝 Área da Promotora":
 # FLUXO 1: ÁREA DA PROMOTORA
 # ==============================================================
 if menu == "📝 Área da Promotora":
-    st.title("🐾 Auditoria Juiz de Fora 2026")
-    st.markdown("---")
+    st.markdown(
+        """
+        <div class="banner-executivo">
+            <h1>🐾 Auditoria Juiz de Fora 2026</h1>
+            <p>Execução de Ponto de Venda &amp; Shelf Space • Minassal Distribuidora &amp; Royal Canin</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     if df_clientes.empty:
         st.warning("A planilha de clientes não foi encontrada ou está vazia.")
@@ -1431,26 +1697,43 @@ if menu == "📝 Área da Promotora":
         else:
             df_clientes["COD_NORM"] = ""
 
+        # Recupera última loja ativa caso a página tenha recarregado no celular
+        ultima_loja_info = carregar_rascunhos_json().get("ultima_loja_ativa", {})
+        tipos_opts = ["Pré-Auditoria", "Auditoria"]
+        proms_opts = [
+            "Auditoria Juiz de Fora",
+            "Pamela",
+            "Fernanda",
+            "Madalla",
+            "Sarmento",
+            "Paulo Maia",
+        ]
+
+        idx_tipo_default = 0
+        if ultima_loja_info.get("tipo_auditoria") in tipos_opts:
+            idx_tipo_default = tipos_opts.index(ultima_loja_info["tipo_auditoria"])
+
+        idx_prom_default = 0
+        if ultima_loja_info.get("promotora") in proms_opts:
+            idx_prom_default = proms_opts.index(ultima_loja_info["promotora"])
+
         st.subheader("1. Identificação e Tipo de Registro")
 
         col_tipo, col_prom = st.columns(2)
         with col_tipo:
             tipo_auditoria = st.radio(
                 "Selecione o Tipo de Registro:",
-                ["Pré-Auditoria", "Auditoria"],
+                tipos_opts,
+                index=idx_tipo_default,
                 horizontal=True,
+                key="radio_tipo_auditoria",
             )
         with col_prom:
             promotora = st.selectbox(
                 "Selecione a Promotora / Supervisor:",
-                [
-                    "Auditoria Juiz de Fora",
-                    "Pamela",
-                    "Fernanda",
-                    "Madalla",
-                    "Sarmento",
-                    "Paulo Maia",
-                ],
+                proms_opts,
+                index=idx_prom_default,
+                key="sel_promotora_ativa",
             )
 
         if promotora == "Auditoria Juiz de Fora":
@@ -1480,13 +1763,33 @@ if menu == "📝 Área da Promotora":
             if lojas_ordenadas:
                 rotulos = []
                 mapa_rotulo_nome = {}
-                for idx_ord, cod_alvo, apelido, nome_cli in lojas_ordenadas:
-                    marca_json = "✅" if cod_alvo in codigos_oficiais_auditados else "⏳"
+                idx_loja_default = 0
+                cod_salvo_ultimo = str(ultima_loja_info.get("codigo_loja", "")).strip()
+
+                for i_rot, (idx_ord, cod_alvo, apelido, nome_cli) in enumerate(lojas_ordenadas):
+                    chave_teste_rasc = f"{tipo_auditoria}__{cod_alvo}__{nome_cli}"
+                    tem_rasc = rascunho_tem_dados_preenchidos(
+                        (obter_rascunho_loja(chave_teste_rasc) or {}).get("dados", {})
+                    )
+                    if cod_alvo in codigos_oficiais_auditados:
+                        marca_json = "✅"
+                    elif tem_rasc:
+                        marca_json = "📝"
+                    else:
+                        marca_json = "⏳"
+
                     rot = f"{marca_json} #{idx_ord:02d} • [{cod_alvo}] {nome_cli} ({apelido})"
                     rotulos.append(rot)
                     mapa_rotulo_nome[rot] = nome_cli
+                    if cod_salvo_ultimo and cod_alvo == cod_salvo_ultimo:
+                        idx_loja_default = i_rot
 
-                rotulo_escolhido = st.selectbox("Selecione o Cliente / Loja:", rotulos)
+                rotulo_escolhido = st.selectbox(
+                    "Selecione o Cliente / Loja (✅ Auditada | 📝 Rascunho salvo | ⏳ Pendente):",
+                    rotulos,
+                    index=idx_loja_default,
+                    key="sel_loja_jf_ativa",
+                )
                 loja_selecionada = mapa_rotulo_nome[rotulo_escolhido]
                 df_filtrado = df_jf_base
             else:
@@ -1531,9 +1834,19 @@ if menu == "📝 Área da Promotora":
             df_filtrado = df_clientes[df_clientes["CIDADE_NORM"].isin(cidades_alvo)]
             lojas_lista = sorted(df_filtrado["NOME"].dropna().unique().tolist())
 
+            idx_outra_default = 0
+            nome_salvo_ultimo = str(ultima_loja_info.get("nome_loja", "")).strip()
+            if nome_salvo_ultimo in lojas_lista:
+                idx_outra_default = lojas_lista.index(nome_salvo_ultimo)
+
             st.subheader("2. Seleção da Loja")
             loja_selecionada = (
-                st.selectbox("Selecione o Cliente / Loja:", lojas_lista)
+                st.selectbox(
+                    "Selecione o Cliente / Loja:",
+                    lojas_lista,
+                    index=idx_outra_default,
+                    key="sel_loja_outra_ativa",
+                )
                 if lojas_lista
                 else None
             )
@@ -1566,29 +1879,66 @@ if menu == "📝 Área da Promotora":
             else:
                 cnpj_formatado = "Não informado"
 
+            # Chave única do rascunho para esta loja + tipo de auditoria
+            chave_rascunho_atual = f"{tipo_auditoria}__{codigo_loja_atual}__{loja_selecionada}"
+
+            # Sempre que abrir ou trocar de loja, carrega o rascunho exclusivo dela (sem misturar com outras lojas)
+            if st.session_state.get("chave_rascunho_carregada") != chave_rascunho_atual:
+                rascunho_existente = obter_rascunho_loja(chave_rascunho_atual)
+                carregar_estado_rascunho_na_sessao(chave_rascunho_atual, rascunho_existente)
+                salvar_ultima_loja_ativa(
+                    promotora, tipo_auditoria, codigo_loja_atual, loja_selecionada
+                )
+
+            # --- TRAVA VISUAL: AVISO EXPLÍCITO DA LOJA ATIVA ---
+            apelido_atual = APELIDOS_POR_CODIGO.get(codigo_loja_atual, "")
+            apelido_badge = f" ({apelido_atual})" if apelido_atual and apelido_atual.lower() != loja_selecionada.lower() else ""
             st.markdown(
                 f"""
-                <div style="background-color: #F8FAFC; border-left: 5px solid #E2001A; padding: 12px; border-radius: 6px; margin-bottom: 10px; color: #0F172A;">
-                    <div style="font-size: 15px; margin-bottom: 4px;">
-                        🏢 <b>Cód.:</b> {codigo_loja_atual} | <b>CNPJ:</b> <span style="color: #E2001A; font-weight: 900; font-size: 17px; font-family: monospace;">{cnpj_formatado}</span>
+                <div class="trava-loja-alerta">
+                    <div class="titulo-trava">⚠️ ATENÇÃO: A LOJA QUE VOCÊ ESTÁ AGORA É:</div>
+                    <div class="nome-loja-trava">{html.escape(loja_selecionada)}{html.escape(apelido_badge)}</div>
+                    <div style="font-size: 14px; color: #1E293B;">
+                        🏢 <b>Cód.:</b> {html.escape(codigo_loja_atual)} &nbsp;|&nbsp;
+                        <b>CNPJ:</b> <span style="color: #E2001A; font-weight: 900; font-family: monospace;">{html.escape(cnpj_formatado)}</span>
                     </div>
-                    <div style="font-size: 13.5px; color: #475569;">
-                        📍 <b>Cidade:</b> {cidade_loja}/{uf_loja} | <b>Endereço:</b> {endereco_exibicao}
+                    <div style="font-size: 13px; color: #475569; margin-top: 2px;">
+                        📍 <b>Cidade:</b> {html.escape(cidade_loja)}/{html.escape(uf_loja)} &nbsp;|&nbsp;
+                        <b>Endereço:</b> {html.escape(endereco_exibicao)}
                     </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-            query_maps = urllib.parse.quote(
-                f"{endereco_loja}, {bairro_loja}, {cidade_loja} - {uf_loja}"
+            col_maps, col_limpar_rasc = st.columns([3, 1.4])
+            with col_maps:
+                query_maps = urllib.parse.quote(
+                    f"{endereco_loja}, {bairro_loja}, {cidade_loja} - {uf_loja}"
+                )
+                url_maps = f"https://www.google.com/maps/search/?api=1&query={query_maps}"
+                st.link_button(
+                    "🗺️ Abrir endereço no Google Maps",
+                    url_maps,
+                    use_container_width=True,
+                )
+            with col_limpar_rasc:
+                if st.button("🧹 Zerar Rascunho desta Loja", use_container_width=True, key="btn_zerar_rascunho"):
+                    limpar_rascunho_loja(chave_rascunho_atual)
+                    carregar_estado_rascunho_na_sessao(chave_rascunho_atual, None)
+                    st.rerun()
+
+            # Aviso se já existir auditoria oficial gravada para esta loja
+            ja_auditada_oficial = any(
+                str(r.get("codigo_loja", "")).strip() == codigo_loja_atual
+                for r in dados_json_nav.get("auditorias", [])
+                if not r.get("registro_teste", False)
             )
-            url_maps = f"https://www.google.com/maps/search/?api=1&query={query_maps}"
-            st.link_button(
-                "🗺️ Abrir endereço no Google Maps",
-                url_maps,
-                use_container_width=True,
-            )
+            if ja_auditada_oficial and tipo_auditoria == "Auditoria":
+                st.warning(
+                    f"🔒 **Trava de Segurança:** A loja **{loja_selecionada}** já possui uma auditoria oficial registrada. "
+                    "Confira se você não está sobrescrevendo por engano antes de salvar."
+                )
 
             st.markdown("---")
             st.subheader("3. Contagem de Frentes & Share por Pilar")
@@ -1599,7 +1949,6 @@ if menu == "📝 Área da Promotora":
                     f"[Cão] Frentes - {m}",
                     min_value=0,
                     max_value=100,
-                    value=0,
                     key=f"cao_{m}",
                 )
                 for m in MARCAS_PADRAO
@@ -1618,7 +1967,6 @@ if menu == "📝 Área da Promotora":
                     f"[Gato] Frentes - {m}",
                     min_value=0,
                     max_value=100,
-                    value=0,
                     key=f"gato_{m}",
                 )
                 for m in MARCAS_PADRAO
@@ -1638,7 +1986,6 @@ if menu == "📝 Área da Promotora":
                     f"[Vet] Frentes - {m}",
                     min_value=0,
                     max_value=100,
-                    value=0,
                     key=f"vet_{m}",
                 )
                 for m in MARCAS_PADRAO
@@ -1668,10 +2015,10 @@ if menu == "📝 Área da Promotora":
                 "Quantidade de Pontos Extras encontrados:",
                 min_value=0,
                 max_value=10,
-                value=0,
+                key="qtd_pontos_extras",
             )
 
-            # --- PAINEL EXECUTIVO AO VIVO (PARA MOSTRAR NA LOJA) ---
+            # --- PAINEL EXECUTIVO AO VIVO ---
             res_diag = calcular_pontuacao_e_diagnostico(
                 frentes_cao, plano_cao, fluxo_cao,
                 frentes_gato, plano_gato, fluxo_gato, sep_fhn,
@@ -1766,6 +2113,7 @@ if menu == "📝 Área da Promotora":
                                         audio_data, language="pt-BR"
                                     )
                                     st.session_state["texto_transcrito_voz"] = texto_falado
+                                    st.session_state["obs_campo_texto"] = texto_falado
                                     st.success("✅ Áudio transcrito com sucesso!")
                             except sr.UnknownValueError:
                                 st.warning(
@@ -1782,12 +2130,41 @@ if menu == "📝 Área da Promotora":
                 with col_apagar:
                     if st.button("🗑️ Apagar Tudo"):
                         st.session_state["texto_transcrito_voz"] = ""
+                        st.session_state["obs_campo_texto"] = ""
                         st.session_state["audio_key_id"] += 1
                         st.rerun()
 
             observacoes_promotora = st.text_area(
                 "Revise ou complemente o texto transcrito da observação:",
-                value=st.session_state["texto_transcrito_voz"],
+                key="obs_campo_texto",
+            )
+
+            # --- EXECUÇÃO DO AUTO-SAVE EM JSON A CADA ALTERAÇÃO ---
+            snapshot_atual = {
+                "codigo_loja": codigo_loja_atual,
+                "loja": loja_selecionada,
+                "cnpj": cnpj_formatado,
+                "tipo_auditoria": tipo_auditoria,
+                "promotora": promotora,
+                "frentes_cao": frentes_cao,
+                "plano_cao": plano_cao,
+                "fluxo_cao": fluxo_cao,
+                "frentes_gato": frentes_gato,
+                "plano_gato": plano_gato,
+                "fluxo_gato": fluxo_gato,
+                "sep_fhn": sep_fhn,
+                "frentes_vet": frentes_vet,
+                "plano_vet": plano_vet,
+                "fluxo_vet": fluxo_vet,
+                "materiais_ativos": materiais_ativos_lista,
+                "conservacao": conservacao,
+                "qtd_extras": qtd_pontos_extras,
+                "observacoes": observacoes_promotora.strip(),
+            }
+            hora_autosave = salvar_rascunho_loja(chave_rascunho_atual, snapshot_atual)
+            st.markdown(
+                f'<div class="badge-autosave">💾 Auto-save ativo ({ARQUIVO_JSON_RASCUNHOS}) • Último salvamento desta loja: {hora_autosave}</div>',
+                unsafe_allow_html=True,
             )
 
             # --- 8. GRUPOS DE E-MAIL E ENVIO ---
@@ -1895,8 +2272,18 @@ if menu == "📝 Área da Promotora":
                     "não será gravado no Google Sheets oficial."
                 )
 
+            # --- TRAVA FINAL ANTES DE SALVAR E ENVIAR ---
             st.markdown("---")
-            if st.button("Finalizar, Salvar e Enviar Auditoria", type="primary"):
+            confirmacao_loja_envio = st.checkbox(
+                f"🔒 Confirmo que estou na loja **{loja_selecionada}** (Cód.: {codigo_loja_atual} • CNPJ: {cnpj_formatado}) e desejo finalizar.",
+                key="confirmar_loja_correta",
+            )
+
+            if st.button(
+                "Finalizar, Salvar e Enviar Auditoria",
+                type="primary",
+                disabled=not confirmacao_loja_envio,
+            ):
                 if registrar_como_teste:
                     destinatarios = list(EMAILS_BENEDITO)
                 else:
@@ -1908,7 +2295,6 @@ if menu == "📝 Área da Promotora":
                             if "@" in e
                         ]
                         destinatarios.extend(extras)
-                    # Garante que se o Benedito corporativo estiver na lista, o pessoal também receba
                     if "benedito.bandola@minassal.com.br" in destinatarios:
                         destinatarios.append("beneditobandola@gmail.com")
                     destinatarios = list(dict.fromkeys(destinatarios))
@@ -1944,7 +2330,7 @@ if menu == "📝 Área da Promotora":
 
                 corpo_email = (
                     f"Olá,\n\nSegue o relatório executivo e as comprovações da auditoria referente a "
-                    f"{tipo_auditoria.upper()} da loja {loja_selecionada} ({cidade_loja}).\n\n"
+                    f"{tipo_auditoria.upper()} da loja {loja_selecionada} (CNPJ: {cnpj_formatado} - {cidade_loja}).\n\n"
                 )
                 corpo_email += f"📊 NOTA FINAL ATUAL: {nota_total:.2f} / 10.0 pts\n"
                 corpo_email += f"• Share Cão: {share_cao:.1f}% (Meta: 30%)\n"
@@ -1970,6 +2356,8 @@ if menu == "📝 Área da Promotora":
                         tipo_auditoria,
                         promotora,
                         loja_selecionada,
+                        cnpj_formatado,
+                        codigo_loja_atual,
                         cidade_loja,
                         endereco_exibicao,
                         dados_completos,
@@ -2085,6 +2473,10 @@ if menu == "📝 Área da Promotora":
                         registro_json, eh_teste=registrar_como_teste
                     )
 
+                    # Remove o rascunho da loja após concluir o salvamento
+                    if salvou_json:
+                        limpar_rascunho_loja(chave_rascunho_atual)
+
                     if audio_novo_path and os.path.exists(audio_novo_path):
                         try:
                             os.remove(audio_novo_path)
@@ -2149,6 +2541,7 @@ elif menu == "📋 Histórico & Feedbacks":
                     "Tipo": r.get("tipo_auditoria", ""),
                     "Cód.": r.get("codigo_loja", ""),
                     "Loja": r.get("loja", ""),
+                    "CNPJ": r.get("cnpj", ""),
                     "Nota": r.get("nota_total", 0),
                     "Share Cão": f"{sh.get('cao', 0)}%",
                     "Share Gato": f"{sh.get('gato', 0)}%",
@@ -2227,6 +2620,7 @@ elif menu == "📋 Histórico & Feedbacks":
                     "Data/Hora": r.get("data_hora", ""),
                     "Cód.": r.get("codigo_loja", ""),
                     "Loja": r.get("loja", ""),
+                    "CNPJ": r.get("cnpj", ""),
                     "Nota": r.get("nota_total", 0),
                     "registro_teste": r.get("registro_teste", True),
                     "Observações": r.get("observacoes", ""),
