@@ -38,8 +38,10 @@ from reportlab.platypus import (
 # Importação opcional do Matplotlib para gráfico executivo no PDF
 try:
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     TEM_MATPLOTLIB = True
 except Exception:
     TEM_MATPLOTLIB = False
@@ -122,8 +124,10 @@ def gerar_icone_pwa_base64() -> str:
     """Gera ícone PNG 512x512 em base64 usando a logo da Royal Canin/Minassal ou emblema padrão."""
     try:
         canvas = PILImage.new("RGB", (512, 512), (226, 0, 26))
-        origem_logo = LOGO_ROYAL if os.path.exists(LOGO_ROYAL) else (
-            LOGO_MINASSAL if os.path.exists(LOGO_MINASSAL) else None
+        origem_logo = (
+            LOGO_ROYAL
+            if os.path.exists(LOGO_ROYAL)
+            else (LOGO_MINASSAL if os.path.exists(LOGO_MINASSAL) else None)
         )
         if origem_logo:
             with PILImage.open(origem_logo) as logo:
@@ -154,14 +158,18 @@ def injetar_pwa_e_tema_executivo():
         "background_color": "#F1F5F9",
         "theme_color": "#E2001A",
         "orientation": "portrait",
-        "icons": [
-            {
-                "src": icon_data_url,
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "any maskable",
-            }
-        ] if icon_data_url else [],
+        "icons": (
+            [
+                {
+                    "src": icon_data_url,
+                    "sizes": "512x512",
+                    "type": "image/png",
+                    "purpose": "any maskable",
+                }
+            ]
+            if icon_data_url
+            else []
+        ),
     }
     manifest_b64 = base64.b64encode(
         json.dumps(manifest_obj, ensure_ascii=False).encode("utf-8")
@@ -471,20 +479,26 @@ def _gravar_rascunhos_json(payload: dict) -> None:
         pass
 
 
-def salvar_ultima_loja_ativa(promotora: str, tipo_auditoria: str, codigo_loja: str, nome_loja: str) -> None:
+def salvar_ultima_loja_ativa(
+    promotora: str, tipo_auditoria: str, codigo_loja: str, nome_loja: str
+) -> None:
     payload = carregar_rascunhos_json()
     payload["ultima_loja_ativa"] = {
         "promotora": promotora,
         "tipo_auditoria": tipo_auditoria,
         "codigo_loja": codigo_loja,
         "nome_loja": nome_loja,
-        "atualizado_em": datetime.now(pytz.timezone("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S"),
+        "atualizado_em": datetime.now(pytz.timezone("America/Sao_Paulo")).strftime(
+            "%d/%m/%Y %H:%M:%S"
+        ),
     }
     _gravar_rascunhos_json(payload)
 
 
 def salvar_rascunho_loja(chave_rascunho: str, estado_loja: dict) -> str:
-    agora_str = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime("%d/%m/%Y %H:%M:%S")
+    agora_str = datetime.now(pytz.timezone("America/Sao_Paulo")).strftime(
+        "%d/%m/%Y %H:%M:%S"
+    )
     payload = carregar_rascunhos_json()
     payload["rascunhos"][chave_rascunho] = {
         "salvo_em": agora_str,
@@ -518,7 +532,9 @@ def rascunho_tem_dados_preenchidos(dados: dict) -> bool:
     return (soma_cao + soma_gato + soma_vet + qtd_mat + extras) > 0 or bool(obs)
 
 
-def carregar_estado_rascunho_na_sessao(chave_rascunho: str, rascunho_entry: dict | None) -> None:
+def carregar_estado_rascunho_na_sessao(
+    chave_rascunho: str, rascunho_entry: dict | None
+) -> None:
     dados = (rascunho_entry or {}).get("dados", {})
 
     for m in MARCAS_PADRAO:
@@ -526,20 +542,48 @@ def carregar_estado_rascunho_na_sessao(chave_rascunho: str, rascunho_entry: dict
         st.session_state[f"gato_{m}"] = int(dados.get("frentes_gato", {}).get(m, 0))
         st.session_state[f"vet_{m}"] = int(dados.get("frentes_vet", {}).get(m, 0))
 
-    st.session_state["plano_cao"] = dados.get("plano_cao", "Sim") if dados.get("plano_cao") in ("Sim", "Não") else "Sim"
-    st.session_state["fluxo_cao"] = dados.get("fluxo_cao", "Sim") if dados.get("fluxo_cao") in ("Sim", "Não") else "Sim"
-    st.session_state["plano_gato"] = dados.get("plano_gato", "Sim") if dados.get("plano_gato") in ("Sim", "Não") else "Sim"
-    st.session_state["fluxo_gato"] = dados.get("fluxo_gato", "Sim") if dados.get("fluxo_gato") in ("Sim", "Não") else "Sim"
-    st.session_state["sep_fhn"] = dados.get("sep_fhn", "Sim") if dados.get("sep_fhn") in ("Sim", "Não") else "Sim"
-    st.session_state["plano_vet"] = dados.get("plano_vet", "Sim") if dados.get("plano_vet") in ("Sim", "Não") else "Sim"
-    st.session_state["fluxo_vet"] = dados.get("fluxo_vet", "Sim") if dados.get("fluxo_vet") in ("Sim", "Não") else "Sim"
+    st.session_state["plano_cao"] = (
+        dados.get("plano_cao", "Sim")
+        if dados.get("plano_cao") in ("Sim", "Não")
+        else "Sim"
+    )
+    st.session_state["fluxo_cao"] = (
+        dados.get("fluxo_cao", "Sim")
+        if dados.get("fluxo_cao") in ("Sim", "Não")
+        else "Sim"
+    )
+    st.session_state["plano_gato"] = (
+        dados.get("plano_gato", "Sim")
+        if dados.get("plano_gato") in ("Sim", "Não")
+        else "Sim"
+    )
+    st.session_state["fluxo_gato"] = (
+        dados.get("fluxo_gato", "Sim")
+        if dados.get("fluxo_gato") in ("Sim", "Não")
+        else "Sim"
+    )
+    st.session_state["sep_fhn"] = (
+        dados.get("sep_fhn", "Sim") if dados.get("sep_fhn") in ("Sim", "Não") else "Sim"
+    )
+    st.session_state["plano_vet"] = (
+        dados.get("plano_vet", "Sim")
+        if dados.get("plano_vet") in ("Sim", "Não")
+        else "Sim"
+    )
+    st.session_state["fluxo_vet"] = (
+        dados.get("fluxo_vet", "Sim")
+        if dados.get("fluxo_vet") in ("Sim", "Não")
+        else "Sim"
+    )
 
     mats_salvos = set(dados.get("materiais_ativos", []))
     for mat in MATERIAIS_PADRAO:
         st.session_state[f"mat_{mat}"] = mat in mats_salvos
 
     cons_salva = dados.get("conservacao", "Sim")
-    st.session_state["conservacao"] = cons_salva if cons_salva in ("Sim", "Não") else "Sim"
+    st.session_state["conservacao"] = (
+        cons_salva if cons_salva in ("Sim", "Não") else "Sim"
+    )
     st.session_state["qtd_pontos_extras"] = int(dados.get("qtd_extras", 0))
     st.session_state["texto_transcrito_voz"] = str(dados.get("observacoes", ""))
     st.session_state["obs_campo_texto"] = str(dados.get("observacoes", ""))
@@ -547,7 +591,7 @@ def carregar_estado_rascunho_na_sessao(chave_rascunho: str, rascunho_entry: dict
     st.session_state["confirmar_loja_correta"] = False
 
 
-# --- GESTÃO DO JSON OFICIAL + TESTES SEPARADOS ---
+# --- GESTÃO DO JSON OFICIAL + TESTES SEPARADOS + MESCLAGEM SEM DUPLICAR ---
 def estrutura_json_padrao() -> dict:
     return {
         "projeto": "Auditoria Juiz de Fora 2026",
@@ -561,6 +605,71 @@ def estrutura_json_padrao() -> dict:
     }
 
 
+def _chave_unica_registro(registro: dict) -> str:
+    """Gera uma chave única para evitar duplicar registros mesmo sem ID explícito."""
+    reg_id = str(registro.get("id", "")).strip()
+    if reg_id:
+        return f"ID::{reg_id}"
+    return "|".join([
+        str(registro.get("codigo_loja", "")).strip(),
+        str(registro.get("loja", "")).strip().upper(),
+        str(registro.get("data_hora", "")).strip(),
+        str(registro.get("tipo_auditoria", "")).strip().upper(),
+        str(registro.get("promotora", "")).strip().upper(),
+        str(registro.get("nota_total", "")).strip(),
+    ])
+
+
+def _normalizar_payload_json(conteudo_json) -> dict:
+    base = estrutura_json_padrao()
+    if isinstance(conteudo_json, dict):
+        base["projeto"] = conteudo_json.get("projeto", base["projeto"])
+        base["modo_teste"] = bool(conteudo_json.get("modo_teste", False))
+        base["lojas_roteiro"] = (
+            list(conteudo_json.get("lojas_roteiro", []))
+            if isinstance(conteudo_json.get("lojas_roteiro"), list)
+            else []
+        )
+        auds_raw = (
+            list(conteudo_json.get("auditorias", []))
+            if isinstance(conteudo_json.get("auditorias"), list)
+            else []
+        )
+        testes_raw = (
+            list(conteudo_json.get("testes", []))
+            if isinstance(conteudo_json.get("testes"), list)
+            else []
+        )
+
+        for r in auds_raw:
+            if not isinstance(r, dict):
+                continue
+            if r.get("registro_teste", False):
+                testes_raw.append(r)
+            else:
+                r["registro_teste"] = False
+                base["auditorias"].append(r)
+
+        for r in testes_raw:
+            if not isinstance(r, dict):
+                continue
+            r["registro_teste"] = True
+            base["testes"].append(r)
+
+    elif isinstance(conteudo_json, list):
+        for r in conteudo_json:
+            if not isinstance(r, dict):
+                continue
+            if r.get("registro_teste", False):
+                r["registro_teste"] = True
+                base["testes"].append(r)
+            else:
+                r["registro_teste"] = False
+                base["auditorias"].append(r)
+
+    return base
+
+
 def carregar_dados_json() -> dict:
     if ARQUIVO_JSON_HISTORICO.exists():
         try:
@@ -568,28 +677,7 @@ def carregar_dados_json() -> dict:
             if not conteudo:
                 return estrutura_json_padrao()
             data = json.loads(conteudo)
-            if isinstance(data, dict):
-                data.setdefault("projeto", "Auditoria Juiz de Fora 2026")
-                data.setdefault("modo_teste", False)
-                data.setdefault("lojas_roteiro", [])
-                data.setdefault("auditorias", [])
-                data.setdefault("testes", [])
-                testes_migrados = [
-                    r for r in data["auditorias"] if r.get("registro_teste", False)
-                ]
-                if testes_migrados:
-                    data["testes"].extend(testes_migrados)
-                    data["auditorias"] = [
-                        r for r in data["auditorias"] if not r.get("registro_teste", False)
-                    ]
-                return data
-            if isinstance(data, list):
-                base = estrutura_json_padrao()
-                base["auditorias"] = [
-                    r for r in data if not r.get("registro_teste", False)
-                ]
-                base["testes"] = [r for r in data if r.get("registro_teste", False)]
-                return base
+            return _normalizar_payload_json(data)
         except Exception as e:
             st.warning(f"Erro ao ler {ARQUIVO_JSON_HISTORICO}: {e}")
     return estrutura_json_padrao()
@@ -597,14 +685,12 @@ def carregar_dados_json() -> dict:
 
 def salvar_dados_json(payload: dict) -> bool:
     try:
-        payload["atualizado_em"] = datetime.now(
+        normalizado = _normalizar_payload_json(payload)
+        normalizado["atualizado_em"] = datetime.now(
             pytz.timezone("America/Sao_Paulo")
         ).strftime("%d/%m/%Y %H:%M:%S")
-        payload["auditorias"] = [
-            r for r in payload.get("auditorias", []) if not r.get("registro_teste", False)
-        ]
         ARQUIVO_JSON_HISTORICO.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(normalizado, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         return True
     except Exception as e:
@@ -637,6 +723,78 @@ def _recalcular_status_roteiro(payload: dict) -> None:
             loja_item["status_visita"] = "pendente"
             loja_item["registro_teste"] = False
             loja_item["auditorias"] = []
+
+
+def mesclar_backup_json_sem_duplicar(conteudo_backup_raw: bytes) -> dict:
+    """Mescla um JSON de backup ao JSON atual sem apagar existentes e sem duplicar registros."""
+    texto_backup = conteudo_backup_raw.decode("utf-8").strip()
+    if not texto_backup:
+        raise ValueError("O arquivo de backup está vazio.")
+
+    dados_backup = _normalizar_payload_json(json.loads(texto_backup))
+    atual = carregar_dados_json()
+
+    auditorias_atuais = list(atual.get("auditorias", []))
+    testes_atuais = list(atual.get("testes", []))
+    roteiro_atual = list(atual.get("lojas_roteiro", []))
+
+    chaves_auds = {_chave_unica_registro(r) for r in auditorias_atuais}
+    chaves_testes = {_chave_unica_registro(r) for r in testes_atuais}
+
+    adicionadas_oficiais = 0
+    ignoradas_duplicadas_oficiais = 0
+    for reg in dados_backup.get("auditorias", []):
+        chave = _chave_unica_registro(reg)
+        if chave in chaves_auds:
+            ignoradas_duplicadas_oficiais += 1
+        else:
+            reg["registro_teste"] = False
+            auditorias_atuais.append(reg)
+            chaves_auds.add(chave)
+            adicionadas_oficiais += 1
+
+    adicionadas_testes = 0
+    ignoradas_duplicadas_testes = 0
+    for reg in dados_backup.get("testes", []):
+        chave = _chave_unica_registro(reg)
+        if chave in chaves_testes:
+            ignoradas_duplicadas_testes += 1
+        else:
+            reg["registro_teste"] = True
+            testes_atuais.append(reg)
+            chaves_testes.add(chave)
+            adicionadas_testes += 1
+
+    # Mescla lojas do roteiro pelo código sem duplicar
+    mapa_roteiro = {}
+    for item in roteiro_atual:
+        if isinstance(item, dict):
+            cod = str(item.get("codigo_loja", "")).strip()
+            if cod:
+                mapa_roteiro[cod] = item
+    for item in dados_backup.get("lojas_roteiro", []):
+        if isinstance(item, dict):
+            cod = str(item.get("codigo_loja", "")).strip()
+            if cod and cod not in mapa_roteiro:
+                mapa_roteiro[cod] = item
+
+    payload_mesclado = {
+        "projeto": atual.get("projeto", "Auditoria Juiz de Fora 2026"),
+        "modo_teste": atual.get("modo_teste", False),
+        "lojas_roteiro": list(mapa_roteiro.values()),
+        "auditorias": auditorias_atuais,
+        "testes": testes_atuais,
+    }
+    _recalcular_status_roteiro(payload_mesclado)
+    salvou = salvar_dados_json(payload_mesclado)
+
+    return {
+        "salvou": salvou,
+        "adicionadas_oficiais": adicionadas_oficiais,
+        "ignoradas_duplicadas_oficiais": ignoradas_duplicadas_oficiais,
+        "adicionadas_testes": adicionadas_testes,
+        "ignoradas_duplicadas_testes": ignoradas_duplicadas_testes,
+    }
 
 
 def registrar_no_json(novo_registro: dict, eh_teste: bool) -> bool:
@@ -845,7 +1003,11 @@ def carregar_grupos_email() -> dict:
                 if nome and emails_raw:
                     lista_limpa = list(
                         dict.fromkeys(
-                            [e.strip() for e in emails_raw.replace(";", ",").split(",") if "@" in e]
+                            [
+                                e.strip()
+                                for e in emails_raw.replace(";", ",").split(",")
+                                if "@" in e
+                            ]
                         )
                     )
                     if lista_limpa:
@@ -869,11 +1031,16 @@ def salvar_grupo_email(nome_grupo: str, lista_emails: list[str]) -> bool:
             sheet_grp.append_row(["Nome_Grupo", "Emails"])
 
         registros = sheet_grp.get_all_records()
-        emails_limpos = list(dict.fromkeys([e.strip() for e in lista_emails if "@" in e]))
+        emails_limpos = list(
+            dict.fromkeys([e.strip() for e in lista_emails if "@" in e])
+        )
         emails_str = ", ".join(emails_limpos)
 
         for idx, row in enumerate(registros, start=2):
-            if str(row.get("Nome_Grupo", "")).strip().lower() == nome_grupo.strip().lower():
+            if (
+                str(row.get("Nome_Grupo", "")).strip().lower()
+                == nome_grupo.strip().lower()
+            ):
                 sheet_grp.update_cell(idx, 1, nome_grupo.strip())
                 sheet_grp.update_cell(idx, 2, emails_str)
                 return True
@@ -893,7 +1060,10 @@ def excluir_grupo_email(nome_grupo: str) -> bool:
         sheet_grp = wb.worksheet("Grupos_Email")
         registros = sheet_grp.get_all_records()
         for idx, row in enumerate(registros, start=2):
-            if str(row.get("Nome_Grupo", "")).strip().lower() == nome_grupo.strip().lower():
+            if (
+                str(row.get("Nome_Grupo", "")).strip().lower()
+                == nome_grupo.strip().lower()
+            ):
                 sheet_grp.delete_rows(idx)
                 return True
     except Exception as e:
@@ -1154,13 +1324,19 @@ def calcular_pontuacao_e_diagnostico(
     qtd_pontos_extras,
 ):
     total_cao = sum(frentes_cao.values())
-    share_cao = (frentes_cao["Royal Canin"] / total_cao * 100) if total_cao > 0 else 0.0
+    share_cao = (
+        (frentes_cao["Royal Canin"] / total_cao * 100) if total_cao > 0 else 0.0
+    )
 
     total_gato = sum(frentes_gato.values())
-    share_gato = (frentes_gato["Royal Canin"] / total_gato * 100) if total_gato > 0 else 0.0
+    share_gato = (
+        (frentes_gato["Royal Canin"] / total_gato * 100) if total_gato > 0 else 0.0
+    )
 
     total_vet = sum(frentes_vet.values())
-    share_vet = (frentes_vet["Royal Canin"] / total_vet * 100) if total_vet > 0 else 0.0
+    share_vet = (
+        (frentes_vet["Royal Canin"] / total_vet * 100) if total_vet > 0 else 0.0
+    )
 
     p_cao = (
         (1.0 if plano_cao == "Sim" else 0.0)
@@ -1209,15 +1385,21 @@ def calcular_pontuacao_e_diagnostico(
         faltas.append("• [Cão] Ajustar abertura de fluxo (+1.0 pt)")
     if share_cao < 30.0:
         f_falt = calcular_frentes_faltantes(frentes_cao["Royal Canin"], total_cao, 30.0)
-        faltas.append(f"• [Cão] Aumentar share para 30% (Faltam {f_falt} frentes) (+0.5 pt)")
+        faltas.append(
+            f"• [Cão] Aumentar share para 30% (Faltam {f_falt} frentes) (+0.5 pt)"
+        )
 
     if plano_gato != "Sim":
         faltas.append("• [Gato] Aplicar planograma (+1.0 pt)")
     if fluxo_gato != "Sim":
         faltas.append("• [Gato] Ajustar abertura de fluxo (+1.0 pt)")
     if share_gato < 35.0:
-        f_falt = calcular_frentes_faltantes(frentes_gato["Royal Canin"], total_gato, 35.0)
-        faltas.append(f"• [Gato] Aumentar share para 35% (Faltam {f_falt} frentes) (+0.5 pt)")
+        f_falt = calcular_frentes_faltantes(
+            frentes_gato["Royal Canin"], total_gato, 35.0
+        )
+        faltas.append(
+            f"• [Gato] Aumentar share para 35% (Faltam {f_falt} frentes) (+0.5 pt)"
+        )
     if sep_fhn != "Sim":
         faltas.append("• [Gato] Separar Super Premium da linha FHN (+0.5 pt)")
 
@@ -1227,7 +1409,9 @@ def calcular_pontuacao_e_diagnostico(
         faltas.append("• [Vet] Ajustar abertura de fluxo (+1.0 pt)")
     if share_vet < 50.0:
         f_falt = calcular_frentes_faltantes(frentes_vet["Royal Canin"], total_vet, 50.0)
-        faltas.append(f"• [Vet] Aumentar share para 50% (Faltam {f_falt} frentes) (+0.5 pt)")
+        faltas.append(
+            f"• [Vet] Aumentar share para 50% (Faltam {f_falt} frentes) (+0.5 pt)"
+        )
 
     if total_materiais < 3:
         faltas.append(
@@ -1251,7 +1435,9 @@ def calcular_pontuacao_e_diagnostico(
 
 
 # --- GRÁFICO EXECUTIVO DE SHARE PARA O PDF ---
-def gerar_grafico_share_pdf(share_cao: float, share_gato: float, share_vet: float) -> str | None:
+def gerar_grafico_share_pdf(
+    share_cao: float, share_gato: float, share_vet: float
+) -> str | None:
     if not TEM_MATPLOTLIB:
         return None
     try:
@@ -1265,11 +1451,21 @@ def gerar_grafico_share_pdf(share_cao: float, share_gato: float, share_vet: floa
         fig, ax = plt.subplots(figsize=(6.8, 2.3), dpi=200)
         y_pos = [2, 1, 0]
 
-        ax.barh(y_pos, [100, 100, 100], height=0.52, color="#F3F4F6", edgecolor="#E5E7EB")
-        ax.barh(y_pos, [min(v, 100) for v in valores], height=0.52, color=cores_barras)
+        ax.barh(
+            y_pos, [100, 100, 100], height=0.52, color="#F3F4F6", edgecolor="#E5E7EB"
+        )
+        ax.barh(
+            y_pos, [min(v, 100) for v in valores], height=0.52, color=cores_barras
+        )
 
         for y, meta, val in zip(y_pos, metas, valores):
-            ax.plot([meta, meta], [y - 0.34, y + 0.34], color="#1F2937", linewidth=2.2, linestyle="--")
+            ax.plot(
+                [meta, meta],
+                [y - 0.34, y + 0.34],
+                color="#1F2937",
+                linewidth=2.2,
+                linestyle="--",
+            )
             status = "✓ Meta" if val >= meta else f"Meta {meta:.0f}%"
             ax.text(
                 min(val, 82) + 2,
@@ -1391,7 +1587,9 @@ def gerar_pdf_auditoria(
     def carregar_logo_rl(caminho_logo, largura, altura, fallback_texto):
         if os.path.exists(caminho_logo):
             try:
-                return RLImage(caminho_logo, width=largura, height=altura, kind="proportional")
+                return RLImage(
+                    caminho_logo, width=largura, height=altura, kind="proportional"
+                )
             except Exception:
                 pass
         return Paragraph(f"<b>{fallback_texto}</b>", style_celula_bold)
@@ -1408,7 +1606,9 @@ def gerar_pdf_auditoria(
             style_titulo_exec,
         )
 
-        t_header = Table([[logo_esq, titulo_centro, logo_dir]], colWidths=[95, 350, 95])
+        t_header = Table(
+            [[logo_esq, titulo_centro, logo_dir]], colWidths=[95, 350, 95]
+        )
         t_header.setStyle(
             TableStyle([
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -1422,7 +1622,11 @@ def gerar_pdf_auditoria(
         elem.append(t_header)
         elem.append(Spacer(1, 8))
 
-        cor_nota = "#059669" if nota_total >= 8.0 else ("#D97706" if nota_total >= 6.0 else "#E2001A")
+        cor_nota = (
+            "#059669"
+            if nota_total >= 8.0
+            else ("#D97706" if nota_total >= 6.0 else "#E2001A")
+        )
         cod_txt = f" (Cód.: {html.escape(str(codigo_loja))})" if codigo_loja else ""
         cnpj_txt = html.escape(str(cnpj)) if cnpj else "Não informado"
         info_pdv = Paragraph(
@@ -1458,7 +1662,9 @@ def gerar_pdf_auditoria(
         elem.append(Paragraph("<b>1. PERFORMANCE DE SHARE POR PILAR</b>", style_secao))
 
         if caminho_grafico_temp and os.path.exists(caminho_grafico_temp):
-            elem.append(RLImage(caminho_grafico_temp, width=520, height=175, kind="proportional"))
+            elem.append(
+                RLImage(caminho_grafico_temp, width=520, height=175, kind="proportional")
+            )
             elem.append(Spacer(1, 6))
         else:
             data_share = [[
@@ -1476,9 +1682,14 @@ def gerar_pdf_auditoria(
                 status_txt = "Meta Atingida" if val >= meta else "Abaixo da Meta"
                 data_share.append([
                     Paragraph(nome_pilar, style_celula),
-                    Paragraph(f"<font color='{cor_txt}'><b>{val:.1f}%</b></font>", style_celula),
+                    Paragraph(
+                        f"<font color='{cor_txt}'><b>{val:.1f}%</b></font>", style_celula
+                    ),
                     Paragraph(f"{meta:.1f}%", style_celula),
-                    Paragraph(f"<font color='{cor_txt}'><b>{status_txt}</b></font>", style_celula),
+                    Paragraph(
+                        f"<font color='{cor_txt}'><b>{status_txt}</b></font>",
+                        style_celula,
+                    ),
                 ])
             t_share = Table(data_share, colWidths=[150, 90, 90, 210])
             t_share.setStyle(
@@ -1511,7 +1722,10 @@ def gerar_pdf_auditoria(
                 Paragraph("Linha Gato", style_celula_bold),
                 Paragraph(dados_completos.get("plano_gato", ""), style_celula),
                 Paragraph(dados_completos.get("fluxo_gato", ""), style_celula),
-                Paragraph(f"Super Premium Sep.: {dados_completos.get('sep_fhn', '')}", style_celula),
+                Paragraph(
+                    f"Super Premium Sep.: {dados_completos.get('sep_fhn', '')}",
+                    style_celula,
+                ),
             ],
             [
                 Paragraph("Linha Veterinária", style_celula_bold),
@@ -1536,7 +1750,9 @@ def gerar_pdf_auditoria(
 
         elem.append(Paragraph("<b>3. MERCHANDISING E PONTOS EXTRAS</b>", style_secao))
         mat_ativos = dados_completos.get("materiais_ativos", [])
-        materiais_str = ", ".join(mat_ativos) if mat_ativos else "Nenhum material assinalado"
+        materiais_str = (
+            ", ".join(mat_ativos) if mat_ativos else "Nenhum material assinalado"
+        )
 
         data_merch = [
             [
@@ -1593,7 +1809,9 @@ def gerar_pdf_auditoria(
         elem = []
         elem.append(PageBreak())
         elem.append(
-            Paragraph("<b>ANEXO 1: DETALHAMENTO DE FRENTES POR MARCA</b>", style_titulo_exec)
+            Paragraph(
+                "<b>ANEXO 1: DETALHAMENTO DE FRENTES POR MARCA</b>", style_titulo_exec
+            )
         )
         elem.append(Spacer(1, 10))
 
@@ -1621,7 +1839,12 @@ def gerar_pdf_auditoria(
             ("TOPPADDING", (0, 0), (-1, -1), 5),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
             ("ALIGN", (1, 1), (-1, -1), "CENTER"),
-            ("BACKGROUND", (0, len(MARCAS_PADRAO)), (-1, len(MARCAS_PADRAO)), colors.HexColor("#FEF2F2")),
+            (
+                "BACKGROUND",
+                (0, len(MARCAS_PADRAO)),
+                (-1, len(MARCAS_PADRAO)),
+                colors.HexColor("#FEF2F2"),
+            ),
         ]
         t_frentes.setStyle(TableStyle(estilos_tab))
         elem.append(t_frentes)
@@ -1630,7 +1853,9 @@ def gerar_pdf_auditoria(
         if caminhos_fotos:
             elem.append(PageBreak())
             elem.append(
-                Paragraph("<b>ANEXO 2: EVIDÊNCIAS FOTOGRÁFICAS</b>", style_titulo_exec)
+                Paragraph(
+                    "<b>ANEXO 2: EVIDÊNCIAS FOTOGRÁFICAS</b>", style_titulo_exec
+                )
             )
             elem.append(Spacer(1, 10))
             linhas_tabela = []
@@ -1698,8 +1923,12 @@ def gerar_pdf_auditoria(
         canvas.saveState()
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(colors.HexColor("#6B7280"))
-        canvas.drawString(25, 15, f"Minassal Distribuidora • Royal Canin | {loja} | CNPJ: {cnpj}")
-        canvas.drawRightString(A4[0] - 25, 15, "Desenvolvido por Benedito Bandola")
+        canvas.drawString(
+            25, 15, f"Minassal Distribuidora • Royal Canin | {loja} | CNPJ: {cnpj}"
+        )
+        canvas.drawRightString(
+            A4[0] - 25, 15, "Desenvolvido por Benedito Bandola"
+        )
         canvas.restoreState()
 
     try:
@@ -1729,7 +1958,9 @@ def gerar_pdf_auditoria(
 def enviar_email_auditoria(assunto, anexos_paths, destinatarios, corpo_email=""):
     remetente = st.secrets.get("email_remetente", "beneditobandola@gmail.com")
     senha = st.secrets.get("email_senha", os.getenv("EMAIL_SENHA", ""))
-    destinatarios_limpos = list(dict.fromkeys([d.strip() for d in destinatarios if "@" in d]))
+    destinatarios_limpos = list(
+        dict.fromkeys([d.strip() for d in destinatarios if "@" in d])
+    )
     if not senha or not destinatarios_limpos:
         return False
 
@@ -1774,7 +2005,9 @@ rascunhos_nav = carregar_rascunhos_json().get("rascunhos", {})
 qtd_oficiais = len(dados_json_nav.get("auditorias", []))
 qtd_testes = len(dados_json_nav.get("testes", []))
 qtd_rascunhos = sum(
-    1 for item in rascunhos_nav.values() if rascunho_tem_dados_preenchidos(item.get("dados", {}))
+    1
+    for item in rascunhos_nav.values()
+    if rascunho_tem_dados_preenchidos(item.get("dados", {}))
 )
 
 col_l1, col_l2 = st.sidebar.columns(2)
@@ -1832,6 +2065,7 @@ if menu == "📝 Área da Promotora":
     if df_clientes.empty:
         st.warning("A planilha de clientes não foi encontrada ou está vazia.")
     else:
+
         def normalize(text):
             if pd.isna(text):
                 return ""
@@ -1930,7 +2164,9 @@ if menu == "📝 Área da Promotora":
                 idx_loja_default = 0
                 cod_salvo_ultimo = str(ultima_loja_info.get("codigo_loja", "")).strip()
 
-                for i_rot, (idx_ord, cod_alvo, apelido, nome_cli) in enumerate(lojas_ordenadas):
+                for i_rot, (idx_ord, cod_alvo, apelido, nome_cli) in enumerate(
+                    lojas_ordenadas
+                ):
                     chave_teste_rasc = f"{tipo_auditoria}__{cod_alvo}__{nome_cli}"
                     tem_rasc = rascunho_tem_dados_preenchidos(
                         (obter_rascunho_loja(chave_teste_rasc) or {}).get("dados", {})
@@ -1962,36 +2198,95 @@ if menu == "📝 Área da Promotora":
         else:
             cidades_map = {
                 "Pamela": [
-                    "POCOS DE CALDAS", "ANDRADAS", "VARGINHA", "ALFENAS",
-                    "SAO LOURENCO", "ITAJUBA", "TRES PONTAS", "TRES CORACOES",
+                    "POCOS DE CALDAS",
+                    "ANDRADAS",
+                    "VARGINHA",
+                    "ALFENAS",
+                    "SAO LOURENCO",
+                    "ITAJUBA",
+                    "TRES PONTAS",
+                    "TRES CORACOES",
                     "POUSO ALEGRE",
                 ],
                 "Fernanda": ["JUIZ DE FORA"],
                 "Madalla": [
-                    "MURIAE", "VICOSA", "UBA", "VISCONDE DO RIO BRANCO",
-                    "PIRAUBA", "RIO POMBA", "GUARANI", "GUIDOVAL",
-                    "TOCANTINS", "SAO JOAO NEPOMUCENO", "RIO NOVO", "RODEIRO",
+                    "MURIAE",
+                    "VICOSA",
+                    "UBA",
+                    "VISCONDE DO RIO BRANCO",
+                    "PIRAUBA",
+                    "RIO POMBA",
+                    "GUARANI",
+                    "GUIDOVAL",
+                    "TOCANTINS",
+                    "SAO JOAO NEPOMUCENO",
+                    "RIO NOVO",
+                    "RODEIRO",
                 ],
                 "Sarmento": [
-                    "SAO JOSE DO RIO PRETO", "MIRASSOL", "OLIMPIA", "IBIRA",
-                    "POTIRENDABA", "JOSE BONIFACIO", "NEVES PAULISTA", "TABAPUA",
-                    "POLONI", "CEDRAL", "TANABI", "JACI", "BADY BASSITT",
-                    "IPIGUA", "NOVA GRANADA", "GUAPIACU", "MONTE APRAZIVEL",
-                    "URUPES", "MENDONCA", "BALSAMO", "UCHOA", "CATIGUA",
+                    "SAO JOSE DO RIO PRETO",
+                    "MIRASSOL",
+                    "OLIMPIA",
+                    "IBIRA",
+                    "POTIRENDABA",
+                    "JOSE BONIFACIO",
+                    "NEVES PAULISTA",
+                    "TABAPUA",
+                    "POLONI",
+                    "CEDRAL",
+                    "TANABI",
+                    "JACI",
+                    "BADY BASSITT",
+                    "IPIGUA",
+                    "NOVA GRANADA",
+                    "GUAPIACU",
+                    "MONTE APRAZIVEL",
+                    "URUPES",
+                    "MENDONCA",
+                    "BALSAMO",
+                    "UCHOA",
+                    "CATIGUA",
                     "MIRASSOLANDIA",
                 ],
                 "Paulo Maia": [
-                    "RIBEIRAO PRETO", "BATATAIS", "SERRANA", "JARDINOPOLIS",
-                    "SERTAOZINHO", "CRAVINHOS", "PONTAL", "SAO SIMAO",
-                    "PITANGUEIRAS", "BRODOWSKI", "LUIS ANTONIO", "DUMONT",
-                    "SALES OLIVEIRA", "BARRINHA", "SERRA AZUL", "SAO CARLOS",
-                    "MATAO", "ARARAQUARA", "IBATE", "BOA ESPERANCA DO SUL",
-                    "AMERICO BRASILIENSE", "RINCAO", "DOURADO", "NOVA EUROPA",
-                    "RIBEIRAO BONITO", "SANTA LUCIA", "TABATINGA",
-                    "SAO JOSE DO RIO PARDO", "VARGEM GRANDE DO SUL", "MOCOCA",
-                    "DIVINOLANDIA", "CASA BRANCA", "SAO SEBASTIAO DA GRAMA",
-                    "SAO JOAO DA BOA VISTA", "TAPIRATIBA", "ITOBI",
-                    "AGUAS PRATA", "ALTINOPOLIS",
+                    "RIBEIRAO PRETO",
+                    "BATATAIS",
+                    "SERRANA",
+                    "JARDINOPOLIS",
+                    "SERTAOZINHO",
+                    "CRAVINHOS",
+                    "PONTAL",
+                    "SAO SIMAO",
+                    "PITANGUEIRAS",
+                    "BRODOWSKI",
+                    "LUIS ANTONIO",
+                    "DUMONT",
+                    "SALES OLIVEIRA",
+                    "BARRINHA",
+                    "SERRA AZUL",
+                    "SAO CARLOS",
+                    "MATAO",
+                    "ARARAQUARA",
+                    "IBATE",
+                    "BOA ESPERANCA DO SUL",
+                    "AMERICO BRASILIENSE",
+                    "RINCAO",
+                    "DOURADO",
+                    "NOVA EUROPA",
+                    "RIBEIRAO BONITO",
+                    "SANTA LUCIA",
+                    "TABATINGA",
+                    "SAO JOSE DO RIO PARDO",
+                    "VARGEM GRANDE DO SUL",
+                    "MOCOCA",
+                    "DIVINOLANDIA",
+                    "CASA BRANCA",
+                    "SAO SEBASTIAO DA GRAMA",
+                    "SAO JOAO DA BOA VISTA",
+                    "TAPIRATIBA",
+                    "ITOBI",
+                    "AGUAS PRATA",
+                    "ALTINOPOLIS",
                 ],
             }
             cidades_alvo = cidades_map.get(promotora, [])
@@ -2044,19 +2339,31 @@ if menu == "📝 Área da Promotora":
                 cnpj_formatado = "Não informado"
 
             # Chave única do rascunho para esta loja + tipo de auditoria
-            chave_rascunho_atual = f"{tipo_auditoria}__{codigo_loja_atual}__{loja_selecionada}"
+            chave_rascunho_atual = (
+                f"{tipo_auditoria}__{codigo_loja_atual}__{loja_selecionada}"
+            )
 
             # Sempre que abrir ou trocar de loja, carrega o rascunho exclusivo dela
-            if st.session_state.get("chave_rascunho_carregada") != chave_rascunho_atual:
+            if (
+                st.session_state.get("chave_rascunho_carregada")
+                != chave_rascunho_atual
+            ):
                 rascunho_existente = obter_rascunho_loja(chave_rascunho_atual)
-                carregar_estado_rascunho_na_sessao(chave_rascunho_atual, rascunho_existente)
+                carregar_estado_rascunho_na_sessao(
+                    chave_rascunho_atual, rascunho_existente
+                )
                 salvar_ultima_loja_ativa(
                     promotora, tipo_auditoria, codigo_loja_atual, loja_selecionada
                 )
 
             # --- TRAVA VISUAL: AVISO EXPLÍCITO DA LOJA ATIVA ---
             apelido_atual = APELIDOS_POR_CODIGO.get(codigo_loja_atual, "")
-            apelido_badge = f" ({apelido_atual})" if apelido_atual and apelido_atual.lower() != loja_selecionada.lower() else ""
+            apelido_badge = (
+                f" ({apelido_atual})"
+                if apelido_atual
+                and apelido_atual.lower() != loja_selecionada.lower()
+                else ""
+            )
             st.markdown(
                 f"""
                 <div class="trava-loja-alerta">
@@ -2080,14 +2387,20 @@ if menu == "📝 Área da Promotora":
                 query_maps = urllib.parse.quote(
                     f"{endereco_loja}, {bairro_loja}, {cidade_loja} - {uf_loja}"
                 )
-                url_maps = f"https://www.google.com/maps/search/?api=1&query={query_maps}"
+                url_maps = (
+                    f"https://www.google.com/maps/search/?api=1&query={query_maps}"
+                )
                 st.link_button(
                     "🗺️ Abrir endereço no Google Maps",
                     url_maps,
                     use_container_width=True,
                 )
             with col_limpar_rasc:
-                if st.button("🧹 Zerar Rascunho desta Loja", use_container_width=True, key="btn_zerar_rascunho"):
+                if st.button(
+                    "🧹 Zerar Rascunho desta Loja",
+                    use_container_width=True,
+                    key="btn_zerar_rascunho",
+                ):
                     limpar_rascunho_loja(chave_rascunho_atual)
                     carregar_estado_rascunho_na_sessao(chave_rascunho_atual, None)
                     st.rerun()
@@ -2117,11 +2430,21 @@ if menu == "📝 Área da Promotora":
                 for m in MARCAS_PADRAO
             }
             total_cao = sum(frentes_cao.values())
-            share_cao = (frentes_cao["Royal Canin"] / total_cao * 100) if total_cao > 0 else 0.0
+            share_cao = (
+                (frentes_cao["Royal Canin"] / total_cao * 100)
+                if total_cao > 0
+                else 0.0
+            )
             st.write(f"📊 **Share Cão Atual:** {share_cao:.1f}% (Meta: 30%)")
 
-            plano_cao = st.radio("Linha Cão está no Planograma?", ["Sim", "Não"], key="plano_cao")
-            fluxo_cao = st.radio("Royal Canin está abrindo o Fluxo (Cão)?", ["Sim", "Não"], key="fluxo_cao")
+            plano_cao = st.radio(
+                "Linha Cão está no Planograma?", ["Sim", "Não"], key="plano_cao"
+            )
+            fluxo_cao = st.radio(
+                "Royal Canin está abrindo o Fluxo (Cão)?",
+                ["Sim", "Não"],
+                key="fluxo_cao",
+            )
 
             st.markdown("---")
             st.markdown("### 🐱 Linha Gato (Meta: 35%)")
@@ -2135,12 +2458,26 @@ if menu == "📝 Área da Promotora":
                 for m in MARCAS_PADRAO
             }
             total_gato = sum(frentes_gato.values())
-            share_gato = (frentes_gato["Royal Canin"] / total_gato * 100) if total_gato > 0 else 0.0
+            share_gato = (
+                (frentes_gato["Royal Canin"] / total_gato * 100)
+                if total_gato > 0
+                else 0.0
+            )
             st.write(f"📊 **Share Gato Atual:** {share_gato:.1f}% (Meta: 35%)")
 
-            plano_gato = st.radio("Linha Gato está no Planograma?", ["Sim", "Não"], key="plano_gato")
-            fluxo_gato = st.radio("Royal Canin está abrindo o Fluxo (Gato)?", ["Sim", "Não"], key="fluxo_gato")
-            sep_fhn = st.radio("Super Premium Cat está separada da linha FHN?", ["Sim", "Não"], key="sep_fhn")
+            plano_gato = st.radio(
+                "Linha Gato está no Planograma?", ["Sim", "Não"], key="plano_gato"
+            )
+            fluxo_gato = st.radio(
+                "Royal Canin está abrindo o Fluxo (Gato)?",
+                ["Sim", "Não"],
+                key="fluxo_gato",
+            )
+            sep_fhn = st.radio(
+                "Super Premium Cat está separada da linha FHN?",
+                ["Sim", "Não"],
+                key="sep_fhn",
+            )
 
             st.markdown("---")
             st.markdown("### 🩺 Linha Veterinária / Tratamento (Meta: 50%)")
@@ -2154,11 +2491,21 @@ if menu == "📝 Área da Promotora":
                 for m in MARCAS_PADRAO
             }
             total_vet = sum(frentes_vet.values())
-            share_vet = (frentes_vet["Royal Canin"] / total_vet * 100) if total_vet > 0 else 0.0
+            share_vet = (
+                (frentes_vet["Royal Canin"] / total_vet * 100)
+                if total_vet > 0
+                else 0.0
+            )
             st.write(f"📊 **Share Vet Atual:** {share_vet:.1f}% (Meta: 50%)")
 
-            plano_vet = st.radio("Linha Vet está no Planograma?", ["Sim", "Não"], key="plano_vet")
-            fluxo_vet = st.radio("Royal Canin está abrindo o Fluxo (Vet)?", ["Sim", "Não"], key="fluxo_vet")
+            plano_vet = st.radio(
+                "Linha Vet está no Planograma?", ["Sim", "Não"], key="plano_vet"
+            )
+            fluxo_vet = st.radio(
+                "Royal Canin está abrindo o Fluxo (Vet)?",
+                ["Sim", "Não"],
+                key="fluxo_vet",
+            )
 
             st.markdown("---")
             st.subheader("4. Merchandising e Presença de Materiais")
@@ -2183,10 +2530,19 @@ if menu == "📝 Área da Promotora":
 
             # --- PAINEL EXECUTIVO AO VIVO ---
             res_diag = calcular_pontuacao_e_diagnostico(
-                frentes_cao, plano_cao, fluxo_cao,
-                frentes_gato, plano_gato, fluxo_gato, sep_fhn,
-                frentes_vet, plano_vet, fluxo_vet,
-                materiais_ativos_lista, conservacao, qtd_pontos_extras,
+                frentes_cao,
+                plano_cao,
+                fluxo_cao,
+                frentes_gato,
+                plano_gato,
+                fluxo_gato,
+                sep_fhn,
+                frentes_vet,
+                plano_vet,
+                fluxo_vet,
+                materiais_ativos_lista,
+                conservacao,
+                qtd_pontos_extras,
             )
             nota_live = res_diag["nota_total"]
             faltas_live = res_diag["faltas"]
@@ -2196,10 +2552,14 @@ if menu == "📝 Área da Promotora":
             c_m1, c_m2, c_m3, c_m4 = st.columns(4)
             c_m1.metric("Nota Atual", f"{nota_live:.2f} / 10")
             c_m2.metric("Share Cão", f"{share_cao:.1f}%", f"{share_cao - 30.0:+.1f}% meta")
-            c_m3.metric("Share Gato", f"{share_gato:.1f}%", f"{share_gato - 35.0:+.1f}% meta")
+            c_m3.metric(
+                "Share Gato", f"{share_gato:.1f}%", f"{share_gato - 35.0:+.1f}% meta"
+            )
             c_m4.metric("Share Vet", f"{share_vet:.1f}%", f"{share_vet - 50.0:+.1f}% meta")
 
-            with st.expander("📋 Ver Plano de Ação Imediato (O que falta para Nota 10)", expanded=False):
+            with st.expander(
+                "📋 Ver Plano de Ação Imediato (O que falta para Nota 10)", expanded=False
+            ):
                 if faltas_live:
                     st.markdown("\n".join(faltas_live))
                 else:
@@ -2275,7 +2635,9 @@ if menu == "📝 Área da Promotora":
                                     texto_falado = r.recognize_google(
                                         audio_data, language="pt-BR"
                                     )
-                                    st.session_state["texto_transcrito_voz"] = texto_falado
+                                    st.session_state["texto_transcrito_voz"] = (
+                                        texto_falado
+                                    )
                                     st.session_state["obs_campo_texto"] = texto_falado
                                     st.success("✅ Áudio transcrito com sucesso!")
                             except sr.UnknownValueError:
@@ -2285,7 +2647,9 @@ if menu == "📝 Área da Promotora":
                             except Exception as e:
                                 st.error(f"Erro ao transcrever: {e}")
                             finally:
-                                if caminho_audio_temp and os.path.exists(caminho_audio_temp):
+                                if caminho_audio_temp and os.path.exists(
+                                    caminho_audio_temp
+                                ):
                                     try:
                                         os.remove(caminho_audio_temp)
                                     except Exception:
@@ -2348,15 +2712,22 @@ if menu == "📝 Área da Promotora":
                 placeholder="gerente@royalcanin.com, diretor@minassal.com.br",
             )
 
-            with st.expander("⚙️ Gerenciar Grupos de E-mail (Criar, Editar ou Excluir)"):
-                tab_novo_grp, tab_del_grp = st.tabs(["💾 Criar / Editar Grupo", "🗑️ Excluir Grupo"])
+            with st.expander(
+                "⚙️ Gerenciar Grupos de E-mail (Criar, Editar ou Excluir)"
+            ):
+                tab_novo_grp, tab_del_grp = st.tabs([
+                    "💾 Criar / Editar Grupo",
+                    "🗑️ Excluir Grupo",
+                ])
                 with tab_novo_grp:
                     grupo_base_edit = st.selectbox(
                         "Preencher a partir de um grupo existente (opcional):",
                         ["(Novo Grupo)"] + nomes_grupos,
                         key="sel_edit_grupo",
                     )
-                    nome_default = "" if grupo_base_edit == "(Novo Grupo)" else grupo_base_edit
+                    nome_default = (
+                        "" if grupo_base_edit == "(Novo Grupo)" else grupo_base_edit
+                    )
                     emails_default = (
                         ""
                         if grupo_base_edit == "(Novo Grupo)"
@@ -2375,7 +2746,9 @@ if menu == "📝 Área da Promotora":
                         placeholder="benedito.bandola@minassal.com.br, beneditobandola@gmail.com, gerente@royalcanin.com",
                         key="inp_emails_grupo",
                     )
-                    if st.button("💾 Salvar Grupo na Planilha", key="btn_salvar_grupo"):
+                    if st.button(
+                        "💾 Salvar Grupo na Planilha", key="btn_salvar_grupo"
+                    ):
                         lista_valida = [
                             e.strip()
                             for e in novos_emails_texto.replace(";", ",").split(",")
@@ -2383,12 +2756,18 @@ if menu == "📝 Área da Promotora":
                         ]
                         if novo_nome_grupo.strip() and lista_valida:
                             if salvar_grupo_email(novo_nome_grupo, lista_valida):
-                                st.success(f"✅ Grupo '{novo_nome_grupo}' salvo no Google Sheets!")
+                                st.success(
+                                    f"✅ Grupo '{novo_nome_grupo}' salvo no Google Sheets!"
+                                )
                                 st.rerun()
                             else:
-                                st.error("Erro ao salvar grupo. Verifique a conexão com o Google Sheets.")
+                                st.error(
+                                    "Erro ao salvar grupo. Verifique a conexão com o Google Sheets."
+                                )
                         else:
-                            st.warning("Informe um nome para o grupo e pelo menos um e-mail válido.")
+                            st.warning(
+                                "Informe um nome para o grupo e pelo menos um e-mail válido."
+                            )
 
                 with tab_del_grp:
                     if len(nomes_grupos) > 1:
@@ -2501,20 +2880,26 @@ if menu == "📝 Área da Promotora":
                 corpo_email += f"• Share Veterinária: {share_vet:.1f}% (Meta: 50%)\n\n"
 
                 if mostrar_o_que_falta:
-                    corpo_email += "==================================================\n"
-                    corpo_email += "🎯 PLANO DE AÇÃO: O QUE FALTA PARA ATINGIR NOTA 10.0?\n"
-                    corpo_email += "==================================================\n\n"
+                    corpo_email += (
+                        "==================================================\n"
+                    )
+                    corpo_email += (
+                        "🎯 PLANO DE AÇÃO: O QUE FALTA PARA ATINGIR NOTA 10.0?\n"
+                    )
+                    corpo_email += (
+                        "==================================================\n\n"
+                    )
                     if faltas:
                         corpo_email += "\n".join(faltas) + "\n\n"
                     else:
                         corpo_email += "Parabéns! PDV com nota máxima e 100% de conformidade!\n\n"
 
-                corpo_email += (
-                    f"Observações: {observacoes_promotora.strip() if observacoes_promotora.strip() else 'Nenhuma.'}\n\n"
-                )
+                corpo_email += f"Observações: {observacoes_promotora.strip() if observacoes_promotora.strip() else 'Nenhuma.'}\n\n"
                 corpo_email += "Atenciosamente,\nSistema de Auditoria Shelf Space • Minassal / Royal Canin."
 
-                with st.spinner("Gerando PDF executivo, gravando histórico e enviando..."):
+                with st.spinner(
+                    "Gerando PDF executivo, gravando histórico e enviando..."
+                ):
                     pdf_path = gerar_pdf_auditoria(
                         tipo_auditoria,
                         promotora,
@@ -2528,7 +2913,9 @@ if menu == "📝 Área da Promotora":
                         frentes_dados,
                         caminhos_temporarios,
                         eh_teste=registrar_como_teste,
-                        texto_melhorias_pdf=corpo_email if incluir_melhorias_pdf else None,
+                        texto_melhorias_pdf=(
+                            corpo_email if incluir_melhorias_pdf else None
+                        ),
                     )
 
                     lista_anexos = [pdf_path]
@@ -2536,16 +2923,20 @@ if menu == "📝 Área da Promotora":
 
                     if audio_gravado is not None:
                         loja_limpa = (
-                            "".join(
-                                [c for c in loja_selecionada if c.isalnum() or c in (" ", "_", "-")]
-                            )
+                            "".join([
+                                c
+                                for c in loja_selecionada
+                                if c.isalnum() or c in (" ", "_", "-")
+                            ])
                             .strip()
                             .replace(" ", "_")
                         )
                         data_hora_arq = datetime.now(fuso_sp).strftime("%d-%m-%Y_%H-%M")
                         tipo_arq = tipo_auditoria.upper().replace("-", "_")
 
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f_audio_envio:
+                        with tempfile.NamedTemporaryFile(
+                            delete=False, suffix=".wav"
+                        ) as f_audio_envio:
                             f_audio_envio.write(audio_gravado.getvalue())
                             audio_temp_path = f_audio_envio.name
 
@@ -2676,7 +3067,11 @@ if menu == "📝 Área da Promotora":
 # FLUXO 2: HISTÓRICO & FEEDBACKS
 # ==============================================================
 elif menu == "📋 Histórico & Feedbacks":
-    st.button("🏠 Voltar ao Menu Principal", on_click=voltar_menu_principal, key="btn_voltar_hist")
+    st.button(
+        "🏠 Voltar ao Menu Principal",
+        on_click=voltar_menu_principal,
+        key="btn_voltar_hist",
+    )
     st.title("📋 Histórico de Auditorias & Feedbacks")
     st.markdown("---")
 
@@ -2716,7 +3111,9 @@ elif menu == "📋 Histórico & Feedbacks":
 
             st.markdown("#### 🗑️ Apagar auditoria para refazer")
             opcoes_apagar = {
-                f"[{r.get('codigo_loja')}] {r.get('loja')} — {r.get('data_hora')} (Nota {r.get('nota_total')})": r.get("id")
+                f"[{r.get('codigo_loja')}] {r.get('loja')} — {r.get('data_hora')} (Nota {r.get('nota_total')})": r.get(
+                    "id"
+                )
                 for r in reversed(auditorias_oficiais)
                 if r.get("id")
             }
@@ -2735,7 +3132,9 @@ elif menu == "📋 Histórico & Feedbacks":
                     key="btn_apagar_oficial",
                     disabled=not confirmar_apagar_of,
                 ):
-                    if excluir_registro_json(opcoes_apagar[escolha_apagar], eh_teste=False):
+                    if excluir_registro_json(
+                        opcoes_apagar[escolha_apagar], eh_teste=False
+                    ):
                         st.success(
                             "Auditoria apagada do JSON e loja devolvida a pendente! Agora você pode refazer na Área da Promotora."
                         )
@@ -2753,12 +3152,48 @@ elif menu == "📋 Histórico & Feedbacks":
             use_container_width=True,
         )
 
+        st.markdown("#### 📤 Upar Backup JSON (Sem Duplicar)")
+        st.caption(
+            "Envie um arquivo `.json` de backup. Os registros que já existem são ignorados automaticamente para não duplicar, e os novos são adicionados."
+        )
+        arquivo_backup_up = st.file_uploader(
+            "Selecione o arquivo de backup (.json):",
+            type=["json"],
+            key="uploader_backup_json",
+        )
+        if arquivo_backup_up is not None:
+            if st.button(
+                "📥 Mesclar Backup ao JSON Atual",
+                key="btn_mesclar_backup",
+                use_container_width=True,
+            ):
+                try:
+                    res_merge = mesclar_backup_json_sem_duplicar(
+                        arquivo_backup_up.getvalue()
+                    )
+                    if res_merge["salvou"]:
+                        st.success(
+                            f"✅ Backup mesclado! Novas oficiais: **{res_merge['adicionadas_oficiais']}** "
+                            f"(duplicadas ignoradas: {res_merge['ignoradas_duplicadas_oficiais']}) | "
+                            f"Novos testes: **{res_merge['adicionadas_testes']}** "
+                            f"(duplicados ignorados: {res_merge['ignoradas_duplicadas_testes']})."
+                        )
+                        st.rerun()
+                    else:
+                        st.error("Não foi possível salvar o JSON mesclado.")
+                except Exception as e:
+                    st.error(f"Erro ao ler ou mesclar o backup JSON: {e}")
+
     with tab_roteiro:
         if roteiro_status:
             linhas_rot = [
                 {
                     "Ordem": l.get("ordem"),
-                    "Status": "✅ Auditada" if l.get("status_visita") == "auditada" else "⏳ Pendente",
+                    "Status": (
+                        "✅ Auditada"
+                        if l.get("status_visita") == "auditada"
+                        else "⏳ Pendente"
+                    ),
                     "Código": l.get("codigo_loja"),
                     "Referência": l.get("apelido"),
                     "Loja": l.get("loja"),
@@ -2795,7 +3230,9 @@ elif menu == "📋 Histórico & Feedbacks":
 
             st.markdown("#### 🗑️ Apagar registro de teste")
             opcoes_apagar_teste = {
-                f"[{r.get('codigo_loja')}] {r.get('loja')} — {r.get('data_hora')} (Nota {r.get('nota_total')})": r.get("id")
+                f"[{r.get('codigo_loja')}] {r.get('loja')} — {r.get('data_hora')} (Nota {r.get('nota_total')})": r.get(
+                    "id"
+                )
                 for r in reversed(registros_testes)
                 if r.get("id")
             }
@@ -2814,7 +3251,9 @@ elif menu == "📋 Histórico & Feedbacks":
                     key="btn_apagar_teste",
                     disabled=not confirmar_apagar_teste,
                 ):
-                    if excluir_registro_json(opcoes_apagar_teste[escolha_teste], eh_teste=True):
+                    if excluir_registro_json(
+                        opcoes_apagar_teste[escolha_teste], eh_teste=True
+                    ):
                         st.success("Registro de teste apagado com sucesso!")
                         st.rerun()
 
@@ -2853,7 +3292,11 @@ elif menu == "📋 Histórico & Feedbacks":
 # FLUXO 3: PAINEL ADMIN
 # ==============================================================
 elif menu == "🔒 Painel Admin (Supervisores)":
-    st.button("🏠 Voltar ao Menu Principal", on_click=voltar_menu_principal, key="btn_voltar_admin")
+    st.button(
+        "🏠 Voltar ao Menu Principal",
+        on_click=voltar_menu_principal,
+        key="btn_voltar_admin",
+    )
     st.title("🔒 Painel Administrativo de Supervisores")
     st.markdown("---")
 
@@ -2869,13 +3312,17 @@ elif menu == "🔒 Painel Admin (Supervisores)":
             st.warning("Primeiro acesso deste usuário! Cadastre sua senha abaixo:")
             with st.form("form_cad_admin"):
                 nova_senha = st.text_input("Defina sua nova senha:", type="password")
-                confirma_senha = st.text_input("Confirme sua nova senha:", type="password")
+                confirma_senha = st.text_input(
+                    "Confirme sua nova senha:", type="password"
+                )
                 btn_salvar = st.form_submit_button("Salvar Nova Senha")
 
                 if btn_salvar:
                     if nova_senha and nova_senha == confirma_senha:
                         if salvar_nova_senha(usuario_sel, nova_senha):
-                            st.success("Senha cadastrada com sucesso! Recarregue a página.")
+                            st.success(
+                                "Senha cadastrada com sucesso! Recarregue a página."
+                            )
                             st.rerun()
                         else:
                             st.error("Erro ao salvar a senha na planilha.")
@@ -2940,7 +3387,9 @@ elif menu == "🔒 Painel Admin (Supervisores)":
                             else:
                                 st.warning("Digite um comentário antes de enviar.")
                     else:
-                        st.info("Nenhuma auditoria cadastrada para receber feedbacks.")
+                        st.info(
+                            "Nenhuma auditoria cadastrada para receber feedbacks."
+                        )
                 except Exception as e:
                     st.error(f"Erro ao buscar histórico: {e}")
 
